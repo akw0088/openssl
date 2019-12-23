@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	unsigned char *private_key = NULL;
 	unsigned char *nonce = NULL;
 
-	if (argc < 3)
+	if (argc < 4)
 	{
 		printf("Usage: nacl_dec file.enc private_key public_key nonce\r\n");
 		return -1;
