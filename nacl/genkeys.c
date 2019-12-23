@@ -38,8 +38,8 @@ int main(void)
 	// Generate keypair
 	crypto_box_keypair(public_key, private_key);
 
-	write_file("nalc.public", public_key, crypto_box_PUBLICKEYBYTES); 
-	write_file("nalc.private", private_key, crypto_box_SECRETKEYBYTES); 
+	write_file("nacl.public", public_key, crypto_box_PUBLICKEYBYTES); 
+	write_file("nacl.private", private_key, crypto_box_SECRETKEYBYTES); 
 
 	return 0;
 }
