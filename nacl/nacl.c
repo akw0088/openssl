@@ -4,9 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-unsigned char n[crypto_box_NONCEBYTES];      // n-once (random data)
 
-	void randombytes(unsigned char *x,unsigned long long xlen);
+void randombytes(unsigned char *x,unsigned long long xlen);
 
 // https://nacl.cr.yp.to/install.html
 //
@@ -26,24 +25,29 @@ unsigned char n[crypto_box_NONCEBYTES];      // n-once (random data)
 
 int main(void)
 {
-	unsigned char pk[crypto_box_PUBLICKEYBYTES] = {0};
-	unsigned char sk[crypto_box_SECRETKEYBYTES] = {0};
-	unsigned char n[crypto_box_NONCEBYTES] = {0};
-	unsigned char m[512] = {0};
-	unsigned char c[512] = {0};
-	unsigned char d[512] = {0};
+	unsigned char public_key[crypto_box_PUBLICKEYBYTES] = {0};
+	unsigned char private_key[crypto_box_SECRETKEYBYTES] = {0};
+	unsigned char nonce[crypto_box_NONCEBYTES] = {0};
+	unsigned char message[512] = {0};
+	unsigned char ciphertext[512] = {0};
+	unsigned char plaintext[512] = {0};
 
-	crypto_box_keypair(pk, sk);
+	// Generate keypair
+	crypto_box_keypair(public_key, private_key);
 
+	// Init N once with random data
+	randombytes(nonce, 24);
 
-	randombytes(n, 24);
 	// NaCl has a stupid zero byte front padding crypto_box_ZEROBYTES
-	sprintf(&m[crypto_box_ZEROBYTES], "Hello World!");
-	printf("plaintext: %s\r\n", &m[crypto_box_ZEROBYTES]);
-	unsigned int mlen = strlen(&m[crypto_box_ZEROBYTES]) + crypto_box_ZEROBYTES;
+	sprintf(&message[crypto_box_ZEROBYTES], "Hello World!");
+	printf("message: %s\r\n", &message[crypto_box_ZEROBYTES]);
+
+	// cipher length same as message length
+	unsigned int mlen = strlen(&message[crypto_box_ZEROBYTES]) + crypto_box_ZEROBYTES;
 	unsigned int clen = mlen;
 
-	int ret = crypto_box(c, m, mlen, n, pk, sk);
+	// magic encrypt function Curve25519, Salsa20, and Poly1305
+	int ret = crypto_box(ciphertext, message, mlen, nonce, public_key, private_key);
 	if (ret == -1)
 	{
 		printf("crypto_box failed\r\n");
@@ -51,15 +55,16 @@ int main(void)
 	}
 
 	// The open function also needs zero padding on ciphertext of crypto_box_BOXZEROBYTES
-	// Plain text will also have zero padding of crypto_box_BOXZEROBYTES
-	crypto_box_open(d, c, clen, n, pk, sk);
+	// should already be padded from crypto_box
+	crypto_box_open(plaintext, ciphertext, clen, nonce, public_key, private_key);
 	if (ret == -1)
 	{
 		printf("crypto_box_open failed\r\n");
 		return -1;
 	}
 
-	printf("decrypted: %s\r\n", &d[crypto_box_ZEROBYTES]);//&d[crypto_box_BOXZEROBYTES]);
+	// Plain text will also have zero padding of crypto_box_ZEROBYTES
+	printf("decrypted: %s\r\n", &plaintext[crypto_box_ZEROBYTES]);//&d[crypto_box_BOXZEROBYTES]);
 
 	return 0;
 }
