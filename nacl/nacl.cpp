@@ -25,6 +25,8 @@ extern "C" {
 // gcc -c devurandom.c
 // g++ nacl.cpp devurandom.o ./nacl-20110221/build/localhost/lib/amd64/libnacl.a -I ./nacl-20110221/build/localhost/include/amd64/ -fpermissive
 
+// Note: The NaCl "tests" directory has useful examples
+
 int main(void)
 {
 	std::string c;
