@@ -64,7 +64,7 @@ int main(void)
 	}
 
 	// Plain text will also have zero padding of crypto_box_ZEROBYTES
-	printf("decrypted: %s\r\n", &plaintext[crypto_box_ZEROBYTES]);//&d[crypto_box_BOXZEROBYTES]);
+	printf("decrypted: %s\r\n", &plaintext[crypto_box_ZEROBYTES]);
 
 	return 0;
 }
