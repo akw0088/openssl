@@ -7,8 +7,11 @@
 #ifdef WIN32
 	#include <windows.h>
 	#include <winsock.h>
+	#include <sodium.h>
 
+	#include <sodium/crypto_box.h>
 	#pragma comment(lib, "wsock32.lib")
+	#pragma comment(lib, "libsodium.lib")
 
 	typedef int socklen_t;
 #else
@@ -26,11 +29,11 @@
 	typedef	int SOCKET;
 	#define SOCKET_ERROR	-1
 	#define INVALID_SOCKET	-1
+	#include "crypto_box.h"
 #endif
 
 
 
-#include "crypto_box.h"
 
 
 #define MAX(x,y) (x) > (y) ? (x) : (y)
@@ -162,7 +165,7 @@ int nacl_file_download(char *ip_str, unsigned short int port, unsigned char *res
 
 	while (*download_size < expected_size)
 	{
-		*download_size += recv(sock, &response[*download_size], expected_size - *download_size, 0);
+		*download_size += recv(sock, (char *)&response[*download_size], expected_size - *download_size, 0);
 	}
 	closesocket(sock);
 	return 0;
