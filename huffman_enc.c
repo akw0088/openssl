@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 	unsigned int compressed_size = huffman_compress(encode, size, buffer, size, huffbuf);
 	if (compressed_size == 0)
 	{
-		printf("huffman_compress failed\r\n");
+		printf("huffman_compress failed (file became larger)\r\n");
 		return -1;
 	}
 	printf("Original size %d compressed %d radio %f\r\n", size, compressed_size, (float) compressed_size / size);
