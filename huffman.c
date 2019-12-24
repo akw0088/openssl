@@ -169,8 +169,8 @@ unsigned long huffman_compress(const unsigned char *in,unsigned long inlen,unsig
 		for(b=0;b<bits;++b)
 		{
 			byte_index = outbitctr++ >> 3;
-			if (byte_index >= outlen)
-				return 0;
+//			if (byte_index >= outlen) // allow file to get larger
+//				return 0; // allow file to get larger
 			out[byte_index] = (out[byte_index] << 1) | (unsigned char)(code & 1);
 			code >>= 1;
 		}
@@ -180,14 +180,15 @@ unsigned long huffman_compress(const unsigned char *in,unsigned long inlen,unsig
 	for(b=0;b<bits;++b)
 	{
 		byte_index = outbitctr++ >> 3;
-		if (byte_index >= outlen) return 0;
+//		if (byte_index >= outlen) return 0; // allow file to get larger
 		out[byte_index] = (out[byte_index] << 1) | (unsigned char)(code & 1);
 		code >>= 1;
 	}
 
-	if (outbitctr > (outlen << 3))
-		return 0;
-	else if ((outbitctr & 7))
+//	if (outbitctr > (outlen << 3))
+//		return 0; // allow file to get larger
+//	else
+	if ((outbitctr & 7))
 	{
 		out[i = (outbitctr >> 3)] <<= 8 - (outbitctr & 7);
 		return (i + 1);

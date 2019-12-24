@@ -73,21 +73,28 @@ int main(int argc, char *argv[])
 
 	char *encode = get_file(argv[1], &size);
 
-	char *buffer = (char *)malloc(size);
+	char *buffer = (char *)malloc(2 * size);
 	if (buffer == NULL)
 	{
 		perror("malloc failed");
 		return -1;
 	}
 
-	memset(buffer, 0, size);
+	memset(buffer, 0, 2 * size);
+	printf("Compressing %s\r\n", argv[1]);
+	if (size == 0)
+	{
+		printf("Error: input file is 0 bytes\r\n");
+		return -1;
+	}
+
 	unsigned int compressed_size = huffman_compress(encode, size, buffer, size, huffbuf);
 	if (compressed_size == 0)
 	{
 		printf("huffman_compress failed (file became larger)\r\n");
 		return -1;
 	}
-	printf("Original size %d compressed %d radio %f\r\n", size, compressed_size, (float) compressed_size / size);
+	printf("Original size %d compressed %d ratio %f\r\n", size, compressed_size, (float) compressed_size / size);
 
 	snprintf(filename, 255, "%s.huff", argv[1]);
 
