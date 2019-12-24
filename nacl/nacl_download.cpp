@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
 	unsigned int size = 0;
 	unsigned char nonce[24] = {0};
 
-	if (argc < 5)
+	if (argc < 6)
 	{
 		printf("Usage: nacl_download ip port max_size pubkey prikey\r\n");
 		printf("Example: ./nacl_download 127.0.0.1 65535 536870912 nacl.public nacl.private\r\n");
@@ -221,21 +221,37 @@ int main(int argc, char *argv[])
 	port = atoi(argv[2]);
 	size = atoi(argv[3]);
 
-	unsigned int pubkey_size = 0;
-	unsigned char *public_key = (unsigned char *)get_file(argv[4], &pubkey_size);
+	unsigned int public_size = 0;
+	unsigned char *public_key = (unsigned char *)get_file(argv[4], &public_size);
 	if (public_key == NULL)
 	{
 		printf("Failed to open public key\r\n");
 		return -1;
 	}
 
-	unsigned int prikey_size = 0;
-	unsigned char *private_key = (unsigned char *)get_file(argv[5], &prikey_size);
+	unsigned int private_size = 0;
+	unsigned char *private_key = (unsigned char *)get_file(argv[5], &private_size);
 	if (private_key == NULL)
 	{
 		printf("Failed to open private key\r\n");
 		return -1;
 	}
+
+	printf("public_key: ");
+	for (int i = 0; i < public_size; i++)
+	{
+		printf("%02X", public_key[i]);
+	}
+	printf("\n");
+
+	printf("private_key: ");
+	for (int i = 0; i < private_size; i++)
+	{
+		printf("%02X", private_key[i]);
+	}
+	printf("\n");
+
+
 
 	printf("Allocating %d bytes\r\n", size);
 	unsigned char *response = (unsigned char *)malloc(size);
@@ -265,6 +281,12 @@ int main(int argc, char *argv[])
 		printf("%02X", nonce[i]);
 	}
 	printf("\n");
+	printf("Ciphertext: ");
+	for (int i = 0; i < download_size; i++)
+	{
+		printf("%02X", response[i]);
+	}
+	printf("\n");
 
 
 	char new_filename[256] = {0};
@@ -284,6 +306,7 @@ int main(int argc, char *argv[])
 		return -1; 
 	}
 
+	memset(plaintext, 0, size);
 	printf("Allocating %d bytes\r\n", size);
 
 

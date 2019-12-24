@@ -116,6 +116,21 @@ int nacl_encrypt(char *prikey, char *pubkey, unsigned char *data, unsigned int d
 	}
 	printf("\n");
 
+	printf("public_key: ");
+	for (int i = 0; i < public_size; i++)
+	{
+		printf("%02X", public_key[i]);
+	}
+	printf("\n");
+
+	printf("private_key: ");
+	for (int i = 0; i < private_size; i++)
+	{
+		printf("%02X", private_key[i]);
+	}
+	printf("\n");
+
+
 	// NaCl has a stupid zero byte front padding crypto_box_ZEROBYTES
 	memcpy(&message[crypto_box_ZEROBYTES], data, data_size);
 
@@ -213,8 +228,16 @@ int nacl_file_upload(char *file, unsigned short port, char *public_key_filename,
 		send(connfd, (char *)&file_size, sizeof(int), 0);
 		send(connfd, (char *)&nonce, 24, 0);
 		send(connfd, (char *)ciphertext, ciphertext_len, 0);
-		free((void *)ciphertext);
 		closesocket(connfd);
+
+		printf("Ciphertext: ");
+		for (int i = 0; i < ciphertext_len; i++)
+		{
+			printf("%02X", ciphertext[i]);
+		}
+		printf("\n");
+		free((void *)ciphertext);
+
 	}
 	return 0;
 }
@@ -226,7 +249,7 @@ int main(int argc, char *argv[])
 {
 	unsigned short port = 65535;
 
-	if (argc < 4)
+	if (argc < 5)
 	{
 		printf("Usage: nacl_upload filename port public_key private_key\r\n");
 		printf("Example: nacl_upload file.tgz 65535 public_key private_key\r\n");
