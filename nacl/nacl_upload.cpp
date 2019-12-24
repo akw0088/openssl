@@ -118,8 +118,6 @@ int nacl_encrypt(unsigned char *private_key, unsigned char *public_key, unsigned
 	}
 
 	free((void *)message);
-	delete [] private_key;
-	delete [] public_key;
 
 	return 0;
 }
