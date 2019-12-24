@@ -33,14 +33,16 @@
 	#include "crypto_box.h"
 #endif
 
+#define SIZE_PATH 128
+
+#define MAX(x,y) (x) > (y) ? (x) : (y)
+#define MIN(x,y) (x) < (y) ? (x) : (y)
 
 
 extern "C" {
 	void randombytes(unsigned char *x,unsigned long long xlen);
 }
 
-#define MAX(x,y) (x) > (y) ? (x) : (y)
-#define MIN(x,y) (x) < (y) ? (x) : (y)
 
 char *get_file(char *filename, unsigned int *size)
 {
@@ -77,7 +79,7 @@ char *get_file(char *filename, unsigned int *size)
 int nacl_encrypt(unsigned char *private_key, unsigned char *public_key, unsigned char *data, unsigned int data_size, unsigned char *&ciphertext, unsigned int &ciphertext_len, unsigned char *nonce)
 {
 	// Init N once with random data
-	randombytes(nonce, 24);
+	randombytes(nonce, crypto_box_NONCEBYTES);
 
 	unsigned int size = 0;
 
@@ -96,7 +98,7 @@ int nacl_encrypt(unsigned char *private_key, unsigned char *public_key, unsigned
 	}
 
 	printf("nonce: ");
-	for(int i = 0; i < 24; i++)
+	for(int i = 0; i < crypto_box_NONCEBYTES; i++)
 	{
 		printf("%02X", nonce[i]);
 	}
@@ -139,7 +141,7 @@ int nacl_file_upload_reverse(char *file, char *ip_str, unsigned short port, unsi
 	}
 	printf("Opened file %s size %d bytes\r\n", file, file_size);
 
-	char file_name[128] = { 0 };
+	char file_name[SIZE_PATH] = { 0 };
 
 	unsigned char *ciphertext = NULL;
 	unsigned int ciphertext_len = 0;
@@ -147,7 +149,7 @@ int nacl_file_upload_reverse(char *file, char *ip_str, unsigned short port, unsi
 	printf("Performing encryptions\r\n");
 	unsigned char nonce[crypto_box_NONCEBYTES] = { 0 };
 
-	randombytes(nonce, 24);
+	randombytes(nonce, crypto_box_NONCEBYTES);
 
 	nacl_encrypt(private_key, public_key, data, file_size, ciphertext, ciphertext_len, nonce);
 	printf("Encrypted size %d\r\n", ciphertext_len);
@@ -212,12 +214,12 @@ int nacl_file_upload_reverse(char *file, char *ip_str, unsigned short port, unsi
 
 	unsigned int magic = 0xF0F0F0F0;
 
-	memcpy(file_name, file, MIN(127, strlen(file)));
+	memcpy(file_name, file, MIN(SIZE_PATH - 1, strlen(file)));
 	send(sock, (char *)&magic, sizeof(int), 0);
 	send(sock, (char *)&ciphertext_len, sizeof(int), 0);
-	send(sock, (char *)&file_name, 128, 0);
+	send(sock, (char *)&file_name, SIZE_PATH, 0);
 	send(sock, (char *)&file_size, sizeof(int), 0);
-	send(sock, (char *)&nonce, 24, 0);
+	send(sock, (char *)&nonce, crypto_box_NONCEBYTES, 0);
 	send(sock, (char *)ciphertext, ciphertext_len, 0);
 	closesocket(sock);
 	free((void *)ciphertext);
@@ -230,8 +232,6 @@ int nacl_file_upload_reverse(char *file, char *ip_str, unsigned short port, unsi
 
 int main(int argc, char *argv[])
 {
-	unsigned short port = 65535;
-
 	if (argc < 6)
 	{
 		printf("Usage: nacl_upload filename ip port private_key public_key\r\n");
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 	WSAStartup(MAKEWORD(2, 0), &WSAData);
 #endif
 
-	port = atoi(argv[3]);
+	unsigned short port = atoi(argv[3]);
 
 	unsigned int private_size = 0;
 	unsigned char *private_key = (unsigned char *)get_file(argv[4], &private_size);

@@ -8,8 +8,8 @@
 	#include <windows.h>
 	#include <winsock.h>
 	#include <sodium.h>
-
 	#include <sodium/crypto_box.h>
+
 	#pragma comment(lib, "wsock32.lib")
 	#pragma comment(lib, "libsodium.lib")
 
@@ -29,12 +29,11 @@
 	typedef	int SOCKET;
 	#define SOCKET_ERROR	-1
 	#define INVALID_SOCKET	-1
+
 	#include "crypto_box.h"
 #endif
 
-
-
-
+#define SIZE_PATH 128
 
 #define MAX(x,y) (x) > (y) ? (x) : (y)
 #define MIN(x,y) (x) < (y) ? (x) : (y)
@@ -43,28 +42,28 @@ int decrypt_download(char *file_name, unsigned char *nonce, char *response, int 
 
 void StripChars(const char *in, char *out, char *stripc)
 {
-    while (*in)
-    {
-    	bool flag = false;
-
-	int length = strlen(stripc);
-    	for(int i = 0; i < length; i++)
+	while (*in)
 	{
-		if (*in == stripc[i])
+		bool flag = false;
+
+		int length = strlen(stripc);
+		for(int i = 0; i < length; i++)
 		{
-			flag = true;
-			break;
+			if (*in == stripc[i])
+			{
+				flag = true;
+				break;
+			}
 		}
-	}
 
-	if (flag)
-	{
-		in++;
-		continue;
+		if (flag)
+		{
+			in++;
+			continue;
+		}
+			*out++ = *in++;
 	}
-        *out++ = *in++;
-    }
-    *out = 0;
+	*out = 0;
 }
 
 char *get_file(char *filename, unsigned int *size)
@@ -129,12 +128,6 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 	time_t			ticks;
 	int listenfd;
 
-#ifdef _WIN32
-	WSADATA		WSAData;
-
-	WSAStartup(MAKEWORD(2, 0), &WSAData);
-#endif
-
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenfd == -1)
 	{
@@ -150,7 +143,7 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 	if ((::bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) == -1)
 	{
 		perror("bind error");
-		return 0;
+		return -1;
 	}
 
 	printf("Server listening on: %s:%d\n", inet_ntoa(servaddr.sin_addr), htons(servaddr.sin_port));
@@ -173,10 +166,11 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 	for (;;)
 	{
 		unsigned int final_size = 0;
-		unsigned char nonce[25] = {0};
-		unsigned char encrypted_key[256] = {0};
+		unsigned char nonce[crypto_box_NONCEBYTES + 1] = {0};
 		unsigned int download_size = 0;
-		char file_name[128] = {0};
+		char file_name[SIZE_PATH] = {0};
+		int expected_size = 0;
+		int magic = 0;
 
 
 
@@ -187,9 +181,6 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 			continue;
 
 		printf("Client: %s\r\n", inet_ntoa(client.sin_addr));
-
-		int expected_size = 0;
-		int magic = 0;
 		recv(connfd, (char *)&magic, 4, 0);
 
 		if (magic != 0xF0F0F0F0)
@@ -200,10 +191,16 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 
 		printf("Client passed magic cookie %X: Downloading\r\n", magic);
 
-		recv(connfd, (char *)&expected_size, 4, 0);
-		recv(connfd, (char *)file_name, 128, 0);
-		recv(connfd, (char *)&final_size, 4, 0);
-		recv(connfd, (char *)nonce, 24, 0);
+		recv(connfd, (char *)&expected_size, sizeof(int), 0);
+		recv(connfd, (char *)file_name, SIZE_PATH, 0);
+		recv(connfd, (char *)&final_size, sizeof(int), 0);
+		recv(connfd, (char *)nonce, crypto_box_NONCEBYTES, 0);
+		
+		if (expected_size > max_malloc_size || final_size > max_malloc_size)
+		{
+			printf("File exceeds max memory limit %d\r\n", max_malloc_size);
+			continue;
+		}
 
 		while (download_size < expected_size)
 		{
@@ -212,40 +209,31 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 
 		if (download_size != expected_size)
 		{
-			printf("expected %d bytes, got only %d bytes\r\n", expected_size, download_size);
+			printf("expected %d bytes, got %d bytes\r\n", expected_size, download_size);
 		}
+		
+		if (download_size == 0)
+		{
+			printf("Download failed\r\n");
+			return -1;
+		}
+
+		
 		closesocket(connfd);
+		printf("Download complete\r\n");
+		printf("Got %d bytes file name %s\r\n", download_size, file_name);
 		decrypt_download(file_name, nonce, response, download_size, private_key, public_key, max_malloc_size);
 		expected_size = 0;
-		memset(file_name, 0, 128);
+		memset(file_name, 0, SIZE_PATH);
 		final_size = 0;
-		memset(nonce, 0, 25);
+		memset(nonce, 0, crypto_box_NONCEBYTES + 1);
 
 	}
 	return 0;
 }
 
-
-
-
-
 int decrypt_download(char *file_name, unsigned char *nonce, char *response, int download_size, unsigned char *private_key, unsigned char *public_key, unsigned int max_malloc_size)
 {
-	if (download_size == 0)
-	{
-		printf("Download failed\r\n");
-		return 0;
-	}
-
-	printf("Download complete\r\n");
-	printf("Got %d bytes file name %s\r\n", download_size, file_name);
-
-
-	char new_filename[256] = {0};
-	char strip_filename[256] = {0};
-
-	StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");
-
 	printf("Attempting to decrypt\r\n");
 	// cipher length same as message length
 	unsigned int clen = download_size;
@@ -273,19 +261,20 @@ int decrypt_download(char *file_name, unsigned char *nonce, char *response, int 
 		return -1;
 	}
 	printf("Decryption Complete\r\n");
+	
+	
+	char new_filename[SIZE_PATH] = {0};
+	char strip_filename[SIZE_PATH] = {0};
+
+	StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");	
 	sprintf(new_filename, "downloaded_%s_unencrypted", strip_filename);
 	printf("Saving as file name %s\r\n", new_filename);
-	write_file(new_filename, &plaintext[crypto_box_ZEROBYTES], clen - crypto_box_ZEROBYTES);
-
-
-
+	write_file(new_filename, &plaintext[crypto_box_ZEROBYTES], clen - crypto_box_ZEROBYTES)
 	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	unsigned short port = 65535;
-	unsigned int max_malloc_size = 0;
 
 	if (argc < 5)
 	{
@@ -301,8 +290,8 @@ int main(int argc, char *argv[])
 #endif
 
 
-	port = atoi(argv[1]);
-	max_malloc_size = atoi(argv[2]);
+	unsigned short port = atoi(argv[1]);
+	unsigned int max_malloc_size = atoi(argv[2]);
 
 	unsigned int private_size = 0;
 	unsigned char *private_key = (unsigned char *)get_file(argv[3], &private_size);
