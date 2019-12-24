@@ -4,7 +4,10 @@ CC := gcc
 CFLAGS := -g -fpermissive
 LFLAGS := -lcrypto
 
-all: base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
+all: crc32 base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
+
+crc32: crc32.c
+	gcc -o crc32 crc32.c
 
 base64_enc: base64_enc.cpp
 	g++ -o base64_enc base64_enc.cpp base64.c -fpermissive
@@ -46,4 +49,4 @@ getrandom: getrandom.cpp
 	g++ -o getrandom getrandom.cpp
 
 clean:
-	rm base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
+	rm crc32 base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
