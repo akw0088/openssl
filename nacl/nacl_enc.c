@@ -1,5 +1,9 @@
-#include "crypto_box.h"
-
+#ifdef WIN32
+	#include <sodium.h>
+	#include <sodium/crypto_box.h>
+#else
+	#include "crypto_box.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
