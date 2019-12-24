@@ -250,6 +250,12 @@ int main(int argc, char *argv[])
 
 	printf("Download complete\r\n");
 	printf("Got %d bytes file name %s\r\n", download_size, file_name);
+	printf("nonce: ");
+	for(int i = 0; i < 24; i++)
+	{
+		printf("%02X", nonce[i]);
+	}
+	printf("\n");
 
 
 	char new_filename[256] = {0};

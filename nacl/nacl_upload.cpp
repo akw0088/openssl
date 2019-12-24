@@ -105,6 +105,13 @@ int nacl_encrypt(char *prikey, char *pubkey, unsigned char *data, unsigned int d
 		return -1;
 	}
 
+	printf("nonce: ");
+	for(int i = 0; i < 24; i++)
+	{
+		printf("%02X", nonce[i]);
+	}
+	printf("\n");
+
 	// NaCl has a stupid zero byte front padding crypto_box_ZEROBYTES
 	memcpy(&message[crypto_box_ZEROBYTES], data, data_size);
 
