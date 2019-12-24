@@ -61,7 +61,7 @@ void StripChars(const char *in, char *out, char *stripc)
 			in++;
 			continue;
 		}
-			*out++ = *in++;
+		*out++ = *in++;
 	}
 	*out = 0;
 }
@@ -125,7 +125,6 @@ int nacl_file_download_reverse(unsigned short int port, unsigned char *private_k
 	int			connfd;
 	unsigned int		socklen = sizeof(struct sockaddr_in);
 	struct sockaddr_in	servaddr, client;
-	time_t			ticks;
 	int listenfd;
 
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -310,7 +309,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Waiting for download file on port %d\r\n", (int)port);
-	int ret = nacl_file_download_reverse(port, private_key, public_key, max_malloc_size);
+	nacl_file_download_reverse(port, private_key, public_key, max_malloc_size);
 
 	return 0;
 }

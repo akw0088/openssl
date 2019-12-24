@@ -81,8 +81,6 @@ int nacl_encrypt(unsigned char *private_key, unsigned char *public_key, unsigned
 	// Init N once with random data
 	randombytes(nonce, crypto_box_NONCEBYTES);
 
-	unsigned int size = 0;
-
 	char *message = (char *)malloc(data_size + crypto_box_ZEROBYTES);
 	if (message == NULL)
 	{
