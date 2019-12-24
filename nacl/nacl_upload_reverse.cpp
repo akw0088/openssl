@@ -245,10 +245,10 @@ int main(int argc, char *argv[])
 	WSAStartup(MAKEWORD(2, 0), &WSAData);
 #endif
 
-	port = atoi(argv[2]);
+	port = atoi(argv[3]);
 
 	unsigned int private_size = 0;
-	unsigned char *private_key = (unsigned char *)get_file(argv[3], &private_size);
+	unsigned char *private_key = (unsigned char *)get_file(argv[4], &private_size);
 	if (private_key == NULL)
 	{
 		printf("Failed to open %s\r\n", argv[3]);
@@ -256,28 +256,15 @@ int main(int argc, char *argv[])
 	}
 
 	unsigned int public_size = 0;
-	unsigned char *public_key = (unsigned char *)get_file(argv[4], &public_size);
+	unsigned char *public_key = (unsigned char *)get_file(argv[5], &public_size);
 	if (public_key == NULL)
 	{
 		printf("Failed to open %s\r\n", argv[4]);
 		return -1;
 	}
 
-	printf("public_key: ");
-	for (int i = 0; i < public_size; i++)
-	{
-		printf("%02X", public_key[i]);
-	}
-	printf("\n");
 
-	printf("private_key: ");
-	for (int i = 0; i < private_size; i++)
-	{
-		printf("%02X", private_key[i]);
-	}
-	printf("\n");
-
-	char *ip_str = argv[5];
+	char *ip_str = argv[2];
 
 	printf("Attempting to upload %s to ip %s port %d\r\n", argv[1], ip_str, (int)port);
 	nacl_file_upload_reverse(argv[1], ip_str, port, private_key, public_key);

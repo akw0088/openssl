@@ -238,7 +238,7 @@ int decrypt_download(char *file_name, unsigned char *nonce, char *response, int 
 	}
 
 	printf("Download complete\r\n");
-	printf("Got %d bytes file name %s remote\r\n", download_size, file_name);
+	printf("Got %d bytes file name %s\r\n", download_size, file_name);
 
 
 	char new_filename[256] = {0};
@@ -272,6 +272,10 @@ int decrypt_download(char *file_name, unsigned char *nonce, char *response, int 
 		printf("crypto_box_open failed\r\n");
 		return -1;
 	}
+	printf("Decryption Complete\r\n");
+	printf("Saving as file name %s\r\n", new_filename);
+	write_file(new_filename, &plaintext[crypto_box_ZEROBYTES], clen - crypto_box_ZEROBYTES);
+
 
 
 	return 0;
@@ -282,7 +286,7 @@ int main(int argc, char *argv[])
 	unsigned short port = 65535;
 	unsigned int max_malloc_size = 0;
 
-	if (argc < 6)
+	if (argc < 5)
 	{
 		printf("Usage: nacl_download_reverse port max_size private_key public_key\r\n");
 		printf("Example: ./nacl_download_reverse 65535 536870912 nacl.private nacl.public\r\n");
@@ -296,11 +300,11 @@ int main(int argc, char *argv[])
 #endif
 
 
-	port = atoi(argv[2]);
-	max_malloc_size = atoi(argv[3]);
+	port = atoi(argv[1]);
+	max_malloc_size = atoi(argv[2]);
 
 	unsigned int private_size = 0;
-	unsigned char *private_key = (unsigned char *)get_file(argv[4], &private_size);
+	unsigned char *private_key = (unsigned char *)get_file(argv[3], &private_size);
 	if (private_key == NULL)
 	{
 		printf("Failed to open private key\r\n");
@@ -308,7 +312,7 @@ int main(int argc, char *argv[])
 	}
 
 	unsigned int public_size = 0;
-	unsigned char *public_key = (unsigned char *)get_file(argv[5], &public_size);
+	unsigned char *public_key = (unsigned char *)get_file(argv[4], &public_size);
 	if (public_key == NULL)
 	{
 		printf("Failed to open public key\r\n");
