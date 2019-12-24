@@ -87,8 +87,10 @@ int main(int argc, char *argv[])
 
 
 	unsigned int decompressed_size = huffman_decompress(buffer, size, decode, length, huffbuf);
+	char filename[256] = {0};
 
-	write_file("file.decompressed", decode, decompressed_size);
+	snprintf(filename, 256, "%s.uncompressed", argv[1]);
+	write_file(filename, decode, decompressed_size);
 
 	return 0;
 }

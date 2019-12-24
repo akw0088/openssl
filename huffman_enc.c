@@ -67,6 +67,8 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+	char filename[256] = {0};
+
 	unsigned int size = 0;
 
 	char *encode = get_file(argv[1], &size);
@@ -80,9 +82,17 @@ int main(int argc, char *argv[])
 
 	memset(buffer, 0, size);
 	unsigned int compressed_size = huffman_compress(encode, size, buffer, size, huffbuf);
+	if (compressed_size == 0)
+	{
+		printf("huffman_compress failed\r\n");
+		return -1;
+	}
+	printf("Original size %d compressed %d radio %f\r\n", size, compressed_size, (float) compressed_size / size);
 
-	write_file("file.huff", buffer, compressed_size);
+	snprintf(filename, 255, "%s.huff", argv[1]);
 
-    return 0;
+	write_file(filename, buffer, compressed_size);
+
+	return 0;
 }
 
