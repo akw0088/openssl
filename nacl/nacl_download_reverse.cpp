@@ -269,7 +269,7 @@ int decrypt_download(char *file_name, unsigned char *nonce, char *response, int 
 	StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");	
 	sprintf(new_filename, "downloaded_%s_unencrypted", strip_filename);
 	printf("Saving as file name %s\r\n", new_filename);
-	write_file(new_filename, &plaintext[crypto_box_ZEROBYTES], clen - crypto_box_ZEROBYTES)
+	write_file(new_filename, &plaintext[crypto_box_ZEROBYTES], clen - crypto_box_ZEROBYTES);
 	return 0;
 }
 
