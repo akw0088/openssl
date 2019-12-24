@@ -90,7 +90,7 @@ int write_file(char *filename, const char *bytes, int size)
     return 0;
 }
 
-int nacl_file_download(char *ip_str, unsigned short int port, char *response, int size, unsigned int *download_size, char *file_name, unsigned int &final_size, unsigned char *nonce)
+int nacl_file_download(char *ip_str, unsigned short int port, unsigned char *response, int size, unsigned int *download_size, char *file_name, unsigned int &final_size, unsigned char *nonce)
 {
 	struct sockaddr_in	servaddr;
 	SOCKET sock;
@@ -203,33 +203,32 @@ int main(int argc, char *argv[])
 
 	if (argc < 5)
 	{
-		printf("Usage: nacl_download ip port max_size prikey pubkey\r\n");
-		printf("Example: ./nacl_download 127.0.0.1 65535 536870912 nacl.private nacl.public\r\n");
+		printf("Usage: nacl_download ip port max_size pubkey prikey\r\n");
+		printf("Example: ./nacl_download 127.0.0.1 65535 536870912 nacl.public nacl.private\r\n");
 		return 0;
 	}
 
 	port = atoi(argv[2]);
 	size = atoi(argv[3]);
 
-	unsigned int prikey_size = 0;
-	unsigned char *private_key = (unsigned char *)get_file(argv[4], &prikey_size);
-	if (private_key == NULL)
-	{
-		printf("Failed to open private key\r\n");
-		return -1;
-	}
-
-
 	unsigned int pubkey_size = 0;
-	unsigned char *public_key = (unsigned char *)get_file(argv[5], &prikey_size);
+	unsigned char *public_key = (unsigned char *)get_file(argv[4], &pubkey_size);
 	if (public_key == NULL)
 	{
 		printf("Failed to open public key\r\n");
 		return -1;
 	}
 
+	unsigned int prikey_size = 0;
+	unsigned char *private_key = (unsigned char *)get_file(argv[5], &prikey_size);
+	if (private_key == NULL)
+	{
+		printf("Failed to open private key\r\n");
+		return -1;
+	}
+
 	printf("Allocating %d bytes\r\n", size);
-	char *response = (char *)malloc(size);
+	unsigned char *response = (unsigned char *)malloc(size);
 	if (response == NULL)
 	{
 		perror("malloc failed");
@@ -250,6 +249,12 @@ int main(int argc, char *argv[])
 
 	printf("Download complete\r\n");
 	printf("Got %d bytes file name %s\r\n", download_size, file_name);
+	printf("nonce: ");
+	for(int i = 0; i < 24; i++)
+	{
+		printf("%02X", nonce[i]);
+	}
+	printf("\n");
 
 
 	char new_filename[256] = {0};
@@ -266,8 +271,10 @@ int main(int argc, char *argv[])
 	if (plaintext == NULL)
 	{
 		perror("malloc failed");
-		return -1;
+		return -1; 
 	}
+
+	printf("Allocating %d bytes\r\n", size);
 
 
 	// The open function also needs zero padding on ciphertext of crypto_box_BOXZEROBYTES
