@@ -211,6 +211,13 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+#ifdef _WIN32
+	WSADATA		WSAData;
+
+	WSAStartup(MAKEWORD(2, 0), &WSAData);
+#endif
+
+
 	port = atoi(argv[2]);
 	size = atoi(argv[3]);
 

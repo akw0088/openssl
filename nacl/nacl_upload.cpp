@@ -146,12 +146,6 @@ int nacl_file_upload(char *file, unsigned short port, char *public_key_filename,
 	time_t			ticks;
 	int listenfd;
 
-#ifdef _WIN32
-	WSADATA		WSAData;
-
-	WSAStartup(MAKEWORD(2, 0), &WSAData);
-#endif
-
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenfd == -1)
 	{
@@ -238,6 +232,13 @@ int main(int argc, char *argv[])
 		printf("Example: nacl_upload file.tgz 65535 public_key private_key\r\n");
 		return 0;
 	}
+
+#ifdef _WIN32
+	WSADATA		WSAData;
+
+	WSAStartup(MAKEWORD(2, 0), &WSAData);
+#endif
+
 
 	port = atoi(argv[2]);
 	char *public_key = argv[3];
