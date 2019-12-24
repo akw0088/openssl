@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
 	}
 
 	// NaCl has a stupid zero byte front padding crypto_box_ZEROBYTES
+	memset(message, 0, size + crypto_box_ZEROBYTES);
 	memcpy(&message[crypto_box_ZEROBYTES], data, size);
 
 	// cipher length same as message length

@@ -73,27 +73,12 @@ char *get_file(char *filename, unsigned int *size)
 	return buffer;
 }
 
-int nacl_encrypt(char *prikey, char *pubkey, unsigned char *data, unsigned int data_size, unsigned char *&ciphertext, unsigned int &ciphertext_len, unsigned char *nonce)
+int nacl_encrypt(unsigned char *private_key, unsigned char *public_key, unsigned char *data, unsigned int data_size, unsigned char *&ciphertext, unsigned int &ciphertext_len, unsigned char *nonce)
 {
 	// Init N once with random data
 	randombytes(nonce, 24);
 
 	unsigned int size = 0;
-	unsigned int private_size = 0;
-	unsigned int public_size = 0;
-	unsigned char *private_key = (unsigned char *)get_file(prikey, &private_size);
-	if (private_key == NULL)
-	{
-		printf("Failed to open %s\r\n", prikey);
-		return -1;
-	}
-
-	unsigned char *public_key = (unsigned char *)get_file(pubkey, &public_size);
-	if (public_key == NULL)
-	{
-		printf("Failed to open %s\r\n", pubkey);
-		return -1;
-	}
 
 	char *message = (char *)malloc(data_size + crypto_box_ZEROBYTES);
 	if (message == NULL)
@@ -116,21 +101,7 @@ int nacl_encrypt(char *prikey, char *pubkey, unsigned char *data, unsigned int d
 	}
 	printf("\n");
 
-	printf("public_key: ");
-	for (int i = 0; i < public_size; i++)
-	{
-		printf("%02X", public_key[i]);
-	}
-	printf("\n");
-
-	printf("private_key: ");
-	for (int i = 0; i < private_size; i++)
-	{
-		printf("%02X", private_key[i]);
-	}
-	printf("\n");
-
-
+	memset(message, 0, data_size + crypto_box_ZEROBYTES);
 	// NaCl has a stupid zero byte front padding crypto_box_ZEROBYTES
 	memcpy(&message[crypto_box_ZEROBYTES], data, data_size);
 
@@ -153,7 +124,7 @@ int nacl_encrypt(char *prikey, char *pubkey, unsigned char *data, unsigned int d
 	return 0;
 }
 
-int nacl_file_upload(char *file, unsigned short port, char *public_key_filename, char *private_key_filename)
+int nacl_file_upload(char *file, unsigned short port, unsigned char *private_key, unsigned char *public_key)
 {
 	int			connfd;
 	unsigned int		size = sizeof(struct sockaddr_in);
@@ -216,7 +187,7 @@ int nacl_file_upload(char *file, unsigned short port, char *public_key_filename,
 		char file_name[128] = { 0 };
 
 		printf("Performing encryptions\r\n");
-		nacl_encrypt(private_key_filename, public_key_filename, data, file_size, ciphertext, ciphertext_len, nonce);
+		nacl_encrypt(private_key, public_key, data, file_size, ciphertext, ciphertext_len, nonce);
 
 		printf("Encrypted size %d\r\n", ciphertext_len);
 
@@ -251,8 +222,8 @@ int main(int argc, char *argv[])
 
 	if (argc < 5)
 	{
-		printf("Usage: nacl_upload filename port public_key private_key\r\n");
-		printf("Example: nacl_upload file.tgz 65535 public_key private_key\r\n");
+		printf("Usage: nacl_upload filename port private_key public_key\r\n");
+		printf("Example: nacl_upload file.tgz 65535 private_key public_key\r\n");
 		return 0;
 	}
 
@@ -264,11 +235,41 @@ int main(int argc, char *argv[])
 
 
 	port = atoi(argv[2]);
-	char *public_key = argv[3];
-	char *private_key = argv[4];
+
+	unsigned int private_size = 0;
+	unsigned char *private_key = (unsigned char *)get_file(argv[3], &private_size);
+	if (private_key == NULL)
+	{
+		printf("Failed to open %s\r\n", argv[3]);
+		return -1;
+	}
+
+	unsigned int public_size = 0;
+	unsigned char *public_key = (unsigned char *)get_file(argv[4], &public_size);
+	if (public_key == NULL)
+	{
+		printf("Failed to open %s\r\n", argv[4]);
+		return -1;
+	}
+
+	printf("public_key: ");
+	for (int i = 0; i < public_size; i++)
+	{
+		printf("%02X", public_key[i]);
+	}
+	printf("\n");
+
+	printf("private_key: ");
+	for (int i = 0; i < private_size; i++)
+	{
+		printf("%02X", private_key[i]);
+	}
+	printf("\n");
+
+
 
 	printf("Attempting to upload %s to client connecting on port %d\r\n", argv[1], (int)port);
-	nacl_file_upload(argv[1], port, public_key, private_key);
+	nacl_file_upload(argv[1], port, private_key, public_key);
 
 	return 0;
 }

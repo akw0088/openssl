@@ -206,8 +206,8 @@ int main(int argc, char *argv[])
 
 	if (argc < 6)
 	{
-		printf("Usage: nacl_download ip port max_size pubkey prikey\r\n");
-		printf("Example: ./nacl_download 127.0.0.1 65535 536870912 nacl.public nacl.private\r\n");
+		printf("Usage: nacl_download ip port max_size private_key public_key\r\n");
+		printf("Example: ./nacl_download 127.0.0.1 65535 536870912 nacl.private nacl.public\r\n");
 		return 0;
 	}
 
@@ -221,19 +221,19 @@ int main(int argc, char *argv[])
 	port = atoi(argv[2]);
 	size = atoi(argv[3]);
 
-	unsigned int public_size = 0;
-	unsigned char *public_key = (unsigned char *)get_file(argv[4], &public_size);
-	if (public_key == NULL)
-	{
-		printf("Failed to open public key\r\n");
-		return -1;
-	}
-
 	unsigned int private_size = 0;
-	unsigned char *private_key = (unsigned char *)get_file(argv[5], &private_size);
+	unsigned char *private_key = (unsigned char *)get_file(argv[4], &private_size);
 	if (private_key == NULL)
 	{
 		printf("Failed to open private key\r\n");
+		return -1;
+	}
+
+	unsigned int public_size = 0;
+	unsigned char *public_key = (unsigned char *)get_file(argv[5], &public_size);
+	if (public_key == NULL)
+	{
+		printf("Failed to open public key\r\n");
 		return -1;
 	}
 
