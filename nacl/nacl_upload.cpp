@@ -7,8 +7,11 @@
 #ifdef WIN32
 	#include <windows.h>
 	#include <winsock.h>
+	#include <sodium.h>
+	#include <sodium/crypto_box.h>
 
 	#pragma comment(lib, "wsock32.lib")
+	#pragma comment(lib, "libsodium.lib")
 
 	typedef int socklen_t;
 #else
@@ -26,9 +29,10 @@
 	typedef	int SOCKET;
 	#define SOCKET_ERROR	-1
 	#define INVALID_SOCKET	-1
+
+	#include "crypto_box.h"
 #endif
 
-#include "crypto_box.h"
 
 
 extern "C" {
@@ -207,7 +211,7 @@ int nacl_file_upload(char *file, unsigned short port, char *public_key_filename,
 		send(connfd, (char *)&file_name, 128, 0);
 		send(connfd, (char *)&file_size, sizeof(int), 0);
 		send(connfd, (char *)&nonce, 24, 0);
-		send(connfd, ciphertext, ciphertext_len, 0);
+		send(connfd, (char *)ciphertext, ciphertext_len, 0);
 		free((void *)ciphertext);
 		closesocket(connfd);
 	}
