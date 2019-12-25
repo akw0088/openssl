@@ -6,7 +6,7 @@
 #include <openssl/err.h>
 
 #include <stdio.h>
- 
+#include <string.h> 
 
 // based on this example: http://hayageek.com/rsa-encryption-decryption-openssl-c/
 
