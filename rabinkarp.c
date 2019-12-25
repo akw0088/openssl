@@ -16,6 +16,7 @@ int mpow(int base, int n)
 	return result;
 }
 
+// Note: this is not a rabin karp fingerprint which uses a finite field / Galois field
 unsigned int rk_hash(unsigned char *data, unsigned int length)
 {
 	unsigned int hash = 0;
