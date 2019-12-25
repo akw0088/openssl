@@ -86,6 +86,6 @@ int main(int argc, char** argv)
 	
 	unsigned int checksum = 0;
 	checksum = adler32(data, length);
-	printf("%08X", checksum);
+	printf("%08X\r\n", checksum);
 	return 0;
 }
