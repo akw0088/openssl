@@ -1,14 +1,14 @@
 CPP := g++ 
 CC := gcc 
 
-CFLAGS := -g -fpermissive
-LFLAGS := -lcrypto
-
-all: adler32 crc32 base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
+all: adler32 rabinkarp crc32 base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
 
 
 adler32: adler32.c
 	gcc -o adler32 adler32.c
+
+rabinkarp: rabinkarp.c
+	gcc -o rabinkarp rabinkarp.c
 
 crc32: crc32.c
 	gcc -o crc32 crc32.c
@@ -53,4 +53,4 @@ getrandom: getrandom.cpp
 	g++ -o getrandom getrandom.cpp
 
 clean:
-	rm adler32 crc32 base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
+	rm adler32 rabinkarp crc32 base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
