@@ -7,9 +7,9 @@ LFLAGS := -lcrypto
 all: base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
 
 base64_enc: base64_enc.cpp
-	g++ -o base64_enc base64_enc.cpp base64.c -fpermissive
+	g++ -o base64_enc base64_enc.c base64.c -fpermissive
 base64_dec: base64_dec.cpp
-	g++ -o base64_dec base64_dec.cpp base64.c -fpermissive
+	g++ -o base64_dec base64_dec.c base64.c -fpermissive
 
 huffman_enc: huffman_enc.c huffman.c
 	g++ -o huffman_enc huffman_enc.c huffman.c -fpermissive
@@ -46,4 +46,4 @@ getrandom: getrandom.cpp
 	g++ -o getrandom getrandom.cpp
 
 clean:
-	rm base64_enc base64_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
+	rm base64_enc base64_dec huffman_enc huffman_dec rsa_enc rsa_dec aes_enc aes_dec upload download aes_upload aes_download aes_upload_reverse aes_download_reverse getrandom
