@@ -69,7 +69,7 @@ unsigned int adler32_roll(unsigned int adler, unsigned char buf_in, unsigned cha
 	return (b << 16) | a;
 }
 
-int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *hash_array, int num_hash, int *offset_array)
+int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *hash_array, int num_hash, unsigned int *offset_array)
 {
 	if (block_size > length)
 	{
@@ -309,7 +309,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 
 	printf("Delta size is %d bytes\r\n", diff_size);
 
-	unsigned char *diff = malloc(diff_size);	
+	unsigned char *diff = (unsigned char *)malloc(diff_size);	
 	*download_size = 0;
 	while (*download_size < diff_size)
 	{
@@ -403,7 +403,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		recv(connfd, (char *)rchecksum_array, rnum_block * sizeof(int), 0);
 
 
-		unsigned int *block_offset = malloc(sizeof(unsigned int) * rnum_block);
+		unsigned int *block_offset = (unsigned int *)malloc(sizeof(unsigned int) * rnum_block);
 		if (block_offset == NULL)
 		{
 			perror("malloc failed");
@@ -414,10 +414,10 @@ int rsync_file_upload(char *file, unsigned short port)
 		memset(block_offset, 0, sizeof(unsigned int) * rnum_block);
 
 		unsigned int rsize = block_size;
-		int ret = adler32_scan(&data[0], file_size, rsize, rchecksum_array, rnum_block - 1, block_offset);
+		int ret = adler32_scan((unsigned char *)&data[0], file_size, rsize, rchecksum_array, rnum_block - 1, block_offset);
 		// last block is smaller than full block, needs another scan
 		rsize = file_size - block_size * (rnum_block - 1);
-		adler32_scan(&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
+		adler32_scan((unsigned char *)&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
 		printf("Sending block offsets\r\n");
 		send(connfd, block_offset, rnum_block * sizeof(unsigned int), 0);
 
@@ -425,7 +425,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		// going to send all bytes in order of whats left starting from 0 and skipping whats in the block report
 		
 		printf("Determining data client is missing\r\n");
-		unsigned char *send_file = malloc(file_size);
+		unsigned char *send_file = (unsigned char *)malloc(file_size);
 		int send_file_pos = 0;
 		for(int i = 0; i < file_size; i++)
 		{
@@ -480,7 +480,7 @@ void StripChars(const char *in, char *out, char *stripc)
 
 		if (flag)
 		{
-			*in++;
+			in++;
 			continue;
 		}
         *out++ = *in++;
