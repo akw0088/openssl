@@ -122,7 +122,7 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 				char hash[33] = { 0 };
 				printf("offset %d matches %08X block %d\r\n", i, checksum, j);
 				printf("Performing strong hash\r\n");
-				md5sum(&data[i], block_size, &hash);
+				md5sum(&data[i], block_size, (char *)&hash);
 
 				if (strcmp(hash, md5_array[j]) == 0)
 				{

@@ -28,13 +28,21 @@ unsigned int adler32_roll(unsigned int adler, unsigned char buf_in, unsigned cha
 	unsigned short a = adler & 0xFFFF;
 	unsigned short b = adler >> 16;
 
-	// remove old byte, add new byte
-        a = (a - buf_out + buf_in) % MOD_ADLER;
+	int a32 = (a + buf_in - buf_out);
+	while (a32 < 0)
+	{
+		a32 += MOD_ADLER;
+	}
+	a = a32 % MOD_ADLER;
 
-	// add new a, remove old a
-	b = (b - (block_size * buf_out) + a - 1) % MOD_ADLER;
+	int b32 = b + a - 1 - block_size * buf_out;
+	while (b32 < 0)
+	{
+		b32 += MOD_ADLER;
+	}
+	b = b32 % MOD_ADLER;
 
-	return b << 16 | a;
+	return (b << 16) | a;
 }
 
 char *get_file(char *filename, unsigned int *size)
