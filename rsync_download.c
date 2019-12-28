@@ -208,7 +208,44 @@ int write_file(char *filename, const char *bytes, int size)
     return 0;
 }
 
-int rsync_file_download(char *ip_str, unsigned short int port, char *response, int size, unsigned int *download_size, char *file_name)
+int assemble_download(char *response, unsigned int rfile_size, char *data, unsigned int file_size, unsigned int *block_offset, int num_block, unsigned int block_size, char *diff, unsigned int diff_size)
+{
+	unsigned int diff_pos = 0;
+
+	for (int i = 0; i < rfile_size; i++)
+	{
+		unsigned int flag = 0;
+
+		for (int j = 0; j < num_block; j++)
+		{
+			if (i == block_offset[j])
+			{
+				memcpy(&response[i], &data[j * block_size], block_size);
+				i += block_size - 1;
+				flag = 1;
+				break;
+			}
+		}
+
+		if (flag)
+		{
+			continue;
+		}
+
+
+		if (diff_pos >= diff_size)
+		{
+			printf("Error: missing data\r\n");
+			return -1;
+		}
+
+		response[i] = diff[diff_pos++];
+	}
+	return 0;
+}
+
+
+int rsync_file_download(char *ip_str, unsigned short int port, char *response, int size, unsigned int *final_size, char *file_name)
 {
 	struct sockaddr_in	servaddr;
 	SOCKET sock;
@@ -273,8 +310,8 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	memset(response, 0, size);
 
 	unsigned int rnum_block = 0;
-	int expected_size = 0;
-	recv(sock, (char *)&expected_size, 4, 0);
+	int rfile_size = 0;
+	recv(sock, (char *)&rfile_size, 4, 0);
 	recv(sock, (char *)file_name, 128, 0);
 
 
@@ -352,15 +389,16 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 
 	printf("Delta size is %d bytes\r\n", diff_size);
 
-	unsigned char *diff = (unsigned char *)malloc(diff_size);	
-	*download_size = 0;
-	while (*download_size < diff_size)
+	unsigned char *diff = (unsigned char *)malloc(diff_size);
+	unsigned int download_size = 0;
+	while (download_size < diff_size)
 	{
-		*download_size += recv(sock, &diff[*download_size], diff_size - *download_size, 0);
+		download_size += recv(sock, &diff[download_size], diff_size - download_size, 0);
 	}
 	printf("Downloaded delta\r\n");
 	closesocket(sock);
-	exit(0);
+	assemble_download(response, rfile_size, data, file_size, block_offset, num_block, block_size, (char *)diff, diff_size);
+	*final_size = rfile_size;
 	return 0;
 }
 
