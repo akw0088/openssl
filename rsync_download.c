@@ -62,8 +62,8 @@ unsigned int adler32(unsigned char *data, unsigned int len)
 // Rolling checksum for Rsync
 unsigned int adler32_roll(unsigned int adler, unsigned char buf_in, unsigned char buf_out, unsigned int block_size)
 {
-	unsigned short a = adler & 0xFFFF;
-	unsigned short b = adler >> 16;
+	unsigned int a = adler & 0xFFFF;
+	unsigned int b = adler >> 16;
 
 	int a32 = (a + buf_in - buf_out);
 	while (a32 < 0)
@@ -109,8 +109,8 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 			data[i + block_size - 1],
 			data[i - 1],
 			block_size);
-#if 1
-//		unsigned int full_hash = adler32(&data[i], block_size);
+#ifdef DEBUG
+		unsigned int full_hash = adler32(&data[i], block_size);
 #endif
 //		checksum = full_hash;
 //		printf("adler32 %d %d\r\n", i, block_size);
@@ -120,30 +120,35 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 			if (checksum == hash_array[j])
 			{
 				char hash[33] = { 0 };
-				printf("offset %d matches %08X block %d\r\n", i, checksum, j);
-				printf("Performing strong hash\r\n");
-				md5sum(&data[i], block_size, (char *)&hash);
+//				printf("offset %d matches %08X block %d\r\n", i, checksum, j);
+//				printf("Performing strong hash\r\n");
+				md5sum(&data[i], block_size, &hash);
 
 				if (strcmp(hash, md5_array[j]) == 0)
 				{
 					printf("offset %d matches %08X block %d with strong hash\r\n", i, checksum, j);
 					offset_array[j] = i;
+
+					// skip the block length and recalc full adler
+					i += block_size - 1;
+					if (i < length - block_size + 1)
+					{
+						checksum = adler32(&data[i], block_size);
+					}
 				}
 				break;
 			}
 		}
 
-//		if (checksum != full_hash)
+#ifdef DEBUG
+		if (checksum != full_hash)
 		{
-//			printf("adler32_roll failed at index %d\r\n", i);
-//			exit(0);
+			printf("adler32_roll failed at index %d\r\n", i);
+			exit(0);
 		}
-
-
-//		sleep(1);
+#endif
 
 	}
-	printf("block_size %d\r\n", block_size);
 	return -1;
 }
 
@@ -282,15 +287,29 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		return -1;
 	}
 
+	// Calculate block size first
 	int block_size = BLOCK_SIZE;
+	int remainder = file_size % block_size;
 	int num_block = file_size / block_size;
+	if (remainder != 0)
+	{
+		num_block++;
+	}
 	
-	if (file_size % block_size != 0)
+	// Increase block size to reduce last block size
+	int increase_block = remainder / num_block;
+	block_size += increase_block;
+	// recalculate block num
+	num_block = file_size / block_size;
+	remainder = file_size % block_size;
+
+	if (remainder != 0)
 	{
 		num_block++;
 	}
 
-	printf("File has %d blocks %d bytes\r\n", num_block, file_size);
+
+	printf("File has %d blocks %d bytes remainder %d\r\n", num_block, file_size, remainder);
 
 	unsigned int *checksum_array = (unsigned int *)malloc(num_block * sizeof(unsigned int));
 	char **md5_array = (char **)malloc(num_block * sizeof(char *));
@@ -309,7 +328,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		md5_array[i] = malloc(33);
 		memset(md5_array[i], 0, 33);
 		md5sum((unsigned char *)&data[block_size * i], rsize, md5_array[i]);
-		printf("Block %d has hash %s\r\n", i, md5_array[i]);
+//		printf("Block %d has hash %s\r\n", i, md5_array[i]);
 //		printf("Block %d has checksum %08X rsize %d\r\n", i, checksum_array[i], rsize);
 //		printf("adler32 %d %d\r\n", block_size * i, rsize);
 	}
@@ -319,6 +338,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	unsigned int *block_offset = (unsigned int *)malloc(num_block * sizeof(unsigned int));
 
 	send(sock, (char *)&num_block, sizeof(int), 0);
+	send(sock, (char *)&block_size, sizeof(int), 0);
 	send(sock, (char *)checksum_array, num_block * sizeof(int), 0);
 	for (int i = 0; i < num_block; i++)
 	{
@@ -401,13 +421,14 @@ int rsync_file_upload(char *file, unsigned short port)
 		}
 
 		char file_name[128] = { 0 };
-		int block_size = BLOCK_SIZE;
+		int rblock_size = BLOCK_SIZE;
 
 		unsigned int rnum_block = 0;
 		memcpy(file_name, file, MIN(127, strlen(file)));
 		send(connfd, (char *)&file_size, sizeof(int), 0);
 		send(connfd, (char *)&file_name, 128, 0);
 		recv(connfd, (char *)&rnum_block, sizeof(int), 0);
+		recv(connfd, (char *)&rblock_size, sizeof(int), 0);
 
 		unsigned int *rchecksum_array = (unsigned int *)malloc(rnum_block * sizeof(int));
 		if (rchecksum_array == NULL)
@@ -445,8 +466,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		
 		memset(block_offset, 0, sizeof(unsigned int) * rnum_block);
 
-		unsigned int rsize = block_size;
-		int ret = adler32_scan(&data[0], file_size, rsize, rchecksum_array, rnum_block - 1, block_offset, rmd5_array);
+		int ret = adler32_scan(&data[0], file_size, rblock_size, rchecksum_array, rnum_block - 1, block_offset, rmd5_array);
 		// last block is smaller than full block, needs another scan
 //		rsize = file_size - block_size * (rnum_block - 1);
 //		adler32_scan(&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
@@ -465,10 +485,10 @@ int rsync_file_upload(char *file, unsigned short port)
 
 			for(int j = 0; j < rnum_block; j++)
 			{
-				if ( i >= block_offset[j] && i < block_offset[j] + block_size )
+				if ( i >= block_offset[j] && i < block_offset[j] + rblock_size )
 				{
 					// we are in this block, skip to the end of this block
-					i = block_offset[j] + block_size;
+					i = block_offset[j] + rblock_size;
 					skip = 1;
 					break;
 				}
