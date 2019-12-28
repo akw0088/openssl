@@ -36,40 +36,52 @@
 
 #define MOD_ADLER 65521
 
+
+
 //    Adler-32 checksum is obtained by calculating two 16-bit checksums A and B and concatenating their bits into a 32-bit integer.
 // A is the sum of all bytes in the stream plus one, and B is the sum of the individual values of A from each step.
 // At the beginning of an Adler-32 run, A is initialized to 1, B to 0. The sums are done modulo 65521 
-unsigned int adler32(unsigned char *buf, unsigned int length)
+unsigned int adler32(unsigned char *data, unsigned int len)
 {
-	unsigned short a = 1;
-	unsigned short b = 0;
+	unsigned short a = 1, b = 0;
+	unsigned int i;
 
-	for(int i = 0; i < length; i++)
+	// Process each byte of the data in order
+	for (i = 0; i < len; i++)
 	{
-	        a = (a + buf[i]) % MOD_ADLER;
-	        b = (b + a) % MOD_ADLER;
+		a = (a + data[i]) % MOD_ADLER;
+		b = (b + a) % MOD_ADLER;
 	}
 
 	return (b << 16) | a;
 }
 
 
-// Rolling checksum for Rsync -- note this is failing to match above after some shifts, not sure whats up
+
+// Rolling checksum for Rsync
 unsigned int adler32_roll(unsigned int adler, unsigned char buf_in, unsigned char buf_out, unsigned int block_size)
 {
 	unsigned short a = adler & 0xFFFF;
-	unsigned short b = (adler >> 16) & 0xFFFF;
+	unsigned short b = adler >> 16;
 
-	// remove old byte, add new byte
-	a = (a - buf_out + buf_in) % MOD_ADLER;
+	int a32 = (a + buf_in - buf_out);
+	while (a32 < 0)
+	{
+		a32 += MOD_ADLER;
+	}
+	a = a32 % MOD_ADLER;
 
-	// add new a, remove old a
-	b = (b - (block_size * buf_out) + a - 1) % MOD_ADLER;
+	int b32 = b + a - 1 - block_size * buf_out;
+	while (b32 < 0)
+	{
+		b32 += MOD_ADLER;
+	}
+	b = b32 % MOD_ADLER;
 
 	return (b << 16) | a;
 }
 
-int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *hash_array, int num_hash, unsigned int *offset_array)
+int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *hash_array, int num_hash, int *offset_array)
 {
 	if (block_size > length)
 	{
@@ -77,11 +89,9 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 		return -1;
 	}
 	
-	unsigned int checksum = 0;
-	unsigned int initial_found = 0;
 
-	checksum = adler32(&data[0], block_size);
-	
+	unsigned int checksum =   adler32(&data[0], block_size);
+
 	for (int i = 0; i < num_hash; i++)
 	{
 		offset_array[i] = -1;
@@ -89,25 +99,19 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 		{
 			printf("offset %d matches %08X\r\n", 0, checksum);
 			offset_array[i] = 0;
-			initial_found = 1;
 		}
 	}
 
 	for(int i = 1; i < length - block_size + 1; i++)
 	{
-		if (initial_found)
-		{
-			initial_found = 0;
-			i = block_size - 1;
-			continue;
-		}
 		checksum = adler32_roll(checksum,
 			data[i + block_size - 1],
 			data[i - 1],
 			block_size);
-			
-		unsigned int full_hash = adler32(&data[i], block_size);
-		checksum = full_hash;
+#if 1
+//		unsigned int full_hash = adler32(&data[i], block_size);
+#endif
+//		checksum = full_hash;
 //		printf("adler32 %d %d\r\n", i, block_size);
 //		printf("Searching for hashes pos %d hash %08X size %d fullhash %08X match %d\r\n", i, checksum, block_size, full_hash, checksum == full_hash);
 		for (int j = 0; j < num_hash; j++)
@@ -116,16 +120,17 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 			{
 				printf("offset %d matches %08X block %d\r\n", i, checksum, j);
 				offset_array[j] = i;
-				i += block_size - 1;
 				break;
 			}
 		}
 
-		if (checksum != full_hash)
+//		if (checksum != full_hash)
 		{
-			printf("adler32_roll failed\r\n");
-			exit(0);
+//			printf("adler32_roll failed at index %d\r\n", i);
+//			exit(0);
 		}
+
+
 //		sleep(1);
 
 	}
@@ -289,10 +294,9 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		{
 			rsize = file_size - block_size * i;
 		}
-
 		checksum_array[i] = adler32((unsigned char *)&data[block_size * i], rsize);
-		printf("Block %d has checksum %08X rsize %d\r\n", i, checksum_array[i], rsize);
-		printf("adler32 %d %d\r\n", block_size * i, rsize);
+//		printf("Block %d has checksum %08X rsize %d\r\n", i, checksum_array[i], rsize);
+//		printf("adler32 %d %d\r\n", block_size * i, rsize);
 	}
 
 	
@@ -329,11 +333,6 @@ int rsync_file_upload(char *file, unsigned short port)
 	time_t			ticks;
 	int listenfd;
 
-#ifdef _WIN32
-	WSADATA		WSAData;
-
-	WSAStartup(MAKEWORD(2, 0), &WSAData);
-#endif
 
 	listenfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listenfd == -1)
@@ -379,7 +378,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		if (data == NULL)
 		{
 			printf("Unable to open %s\r\n", file);
-			return -1;
+			continue;
 		}
 
 		char file_name[128] = { 0 };
@@ -414,10 +413,10 @@ int rsync_file_upload(char *file, unsigned short port)
 		memset(block_offset, 0, sizeof(unsigned int) * rnum_block);
 
 		unsigned int rsize = block_size;
-		int ret = adler32_scan((unsigned char *)&data[0], file_size, rsize, rchecksum_array, rnum_block - 1, block_offset);
+		int ret = adler32_scan(&data[0], file_size, rsize, rchecksum_array, rnum_block - 1, block_offset);
 		// last block is smaller than full block, needs another scan
 		rsize = file_size - block_size * (rnum_block - 1);
-		adler32_scan((unsigned char *)&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
+		adler32_scan(&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
 		printf("Sending block offsets\r\n");
 		send(connfd, block_offset, rnum_block * sizeof(unsigned int), 0);
 
@@ -503,6 +502,11 @@ int main(int argc, char *argv[])
 
 	port = atoi(argv[2]);
 
+#ifdef WIN32
+	WSADATA		WSAData;
+
+	WSAStartup(MAKEWORD(2, 0), &WSAData);
+#endif
 	printf("Attempting to upload %s to client connecting on port %d\r\n", argv[1], (int)port);
 	rsync_file_upload(argv[1], port);
 
