@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 	printf("Ciphertext is:\n");
 	BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
 
-	write_file("file.enc", (char *)ciphertext, ciphertext_len);
+	write_file((char *)"file.enc", (char *)ciphertext, ciphertext_len);
 	return 0;
 }
 

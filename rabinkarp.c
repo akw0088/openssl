@@ -82,7 +82,7 @@ int main(int argc, char** argv)
 	}
 	
 	unsigned int hash = 0;
-	hash = rk_hash(data, length);
+	hash = rk_hash((unsigned char *)data, length);
 	printf("%08X\r\n", hash);
 	return 0;
 }

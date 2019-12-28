@@ -402,7 +402,7 @@ int process_download(char *file_name, char *remote_hash, char *response, int dow
 	char new_filename[256] = {0};
 	char strip_filename[256] = {0};
 
-	StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");
+	StripChars(file_name, strip_filename, (char *)".\\/;:*?\"<>|");
 
 	printf("Attempting to decrypt AES key with RSA\r\n");
 

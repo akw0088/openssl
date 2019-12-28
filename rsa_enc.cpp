@@ -184,6 +184,6 @@ int main(int argc, char *argv[])
 	RSA_free(rsa);
 
 	printf("Encrypted Length %d\r\n", encrypted_length);
-	write_file("file.enc", (char *)encrypted, encrypted_length);
+	write_file((char *)"file.enc", (char *)encrypted, encrypted_length);
 	return 0;
 }

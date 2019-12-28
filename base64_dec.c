@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "huffman.h"
-
-static unsigned char huffbuf[HUFFHEAP_SIZE];
-
+#include "base64.h"
 
 char *get_file(char *filename, unsigned int *size)
 {
@@ -63,42 +60,34 @@ int main(int argc, char *argv[])
 {
 	if (argc < 2)
 	{
-		printf("Usage: huffman_enc file.bin\r\n");
+		printf("Usage: base64_dec file.base64\r\n");
 		return -1;
 	}
 
-	char filename[256] = {0};
-
 	unsigned int size = 0;
 
-	char *encode = get_file(argv[1], &size);
-
-	char *buffer = (char *)malloc(2 * size);
+	char *buffer = get_file(argv[1], &size);
 	if (buffer == NULL)
+	{
+		printf("Unable to open %s\r\n", argv[1]);
+		return -1;
+	}
+
+	unsigned char *decode = (unsigned char *)malloc(size);
+	if (decode == NULL)
 	{
 		perror("malloc failed");
 		return -1;
 	}
+	memset(decode, 0, size);
+	size_t length = size;
 
-	memset(buffer, 0, 2 * size);
-	printf("Compressing %s\r\n", argv[1]);
-	if (size == 0)
-	{
-		printf("Error: input file is 0 bytes\r\n");
-		return -1;
-	}
 
-	unsigned int compressed_size = huffman_compress((unsigned char *)encode, size, (unsigned char *)buffer, size, huffbuf);
-	if (compressed_size == 0)
-	{
-		printf("huffman_compress failed (file became larger)\r\n");
-		return -1;
-	}
-	printf("Original size %d compressed %d ratio %f\r\n", size, compressed_size, (float) compressed_size / size);
 
-	snprintf(filename, 255, "%s.huff", argv[1]);
+	printf("Base64: %s\n", buffer);
+	base64decode(buffer, strlen(buffer), decode, &length);
+	printf("decode: %s\nlength %d\n", decode, (int)length);
 
-	write_file(filename, buffer, compressed_size);
 
 	return 0;
 }

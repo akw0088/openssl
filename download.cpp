@@ -248,7 +248,7 @@ void StripChars(const char *in, char *out, char *stripc)
 
 	if (flag)
 	{
-		*in++;
+		in++;
 		continue;
 	}
         *out++ = *in++;
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 	char new_filename[256] = {0};
 	char strip_filename[256] = {0};
 
-	StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");
+	StripChars(file_name, strip_filename, (char *)".\\/;:*?\"<>|");
 
 	sprintf(new_filename, "downloaded_%s", strip_filename);
 	printf("Saving as file name %s\r\n", new_filename);

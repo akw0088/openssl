@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 	printf("Decrypted text is:\n");
 	printf("%s\n", decryptedtext);
 	
-	write_file("file.txt", (char *)decryptedtext, decryptedtext_len);
+	write_file((char *)"file.txt", (char *)decryptedtext, decryptedtext_len);
 	return 0;
 }
 

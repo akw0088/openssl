@@ -183,6 +183,6 @@ int main(int argc, char *argv[])
 
 	printf("Decrypted Text: %s\n", decrypted);
 	printf("Decrypted Length: %d\n", decrypted_length);
-	write_file("file.txt", (char *)decrypted, decrypted_length);
+	write_file((char *)"file.txt", (char *)decrypted, decrypted_length);
 	return 0;
 }

@@ -18,11 +18,11 @@ char *get_file(char *filename, unsigned int *size)
 	fseek(file, 0, SEEK_END);
 	file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
-	buffer = new char[file_size + 1];
+	buffer = malloc(file_size + 1);
 	bytes_read = (int)fread(buffer, sizeof(char), file_size, file);
 	if (bytes_read != file_size)
 	{
-		delete[] buffer;
+		free((void *)buffer);
 		fclose(file);
 		return 0;
 	}
@@ -86,11 +86,11 @@ int main(int argc, char *argv[])
 	size_t length = 2 * size;
 
 
-	unsigned int decompressed_size = huffman_decompress(buffer, size, decode, length, huffbuf);
+	unsigned int decompressed_size = huffman_decompress((unsigned char *)buffer, size, decode, length, huffbuf);
 	char filename[256] = {0};
 
 	snprintf(filename, 256, "%s.uncompressed", argv[1]);
-	write_file(filename, decode, decompressed_size);
+	write_file(filename, (char *)decode, decompressed_size);
 
 	return 0;
 }
