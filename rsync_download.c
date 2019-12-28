@@ -82,7 +82,7 @@ unsigned int adler32_roll(unsigned int adler, unsigned char buf_in, unsigned cha
 	return (b << 16) | a;
 }
 
-int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *hash_array, int num_hash, int *offset_array, char **md5_array)
+int adler32_scan(unsigned char *data, unsigned int length, int block_size, unsigned int *hash_array, int num_hash, unsigned int *offset_array, char **md5_array)
 {
 	if (block_size > length)
 	{
@@ -122,7 +122,7 @@ int adler32_scan(unsigned char *data, int length, int block_size, unsigned int *
 				char hash[33] = { 0 };
 //				printf("offset %d matches %08X block %d\r\n", i, checksum, j);
 //				printf("Performing strong hash\r\n");
-				md5sum(&data[i], block_size, &hash);
+				md5sum((char *)&data[i], block_size, (char *)&hash);
 
 				if (strcmp(hash, md5_array[j]) == 0)
 				{
@@ -327,7 +327,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		checksum_array[i] = adler32((unsigned char *)&data[block_size * i], rsize);
 		md5_array[i] = malloc(33);
 		memset(md5_array[i], 0, 33);
-		md5sum((unsigned char *)&data[block_size * i], rsize, md5_array[i]);
+		md5sum((char *)&data[block_size * i], rsize, md5_array[i]);
 //		printf("Block %d has hash %s\r\n", i, md5_array[i]);
 //		printf("Block %d has checksum %08X rsize %d\r\n", i, checksum_array[i], rsize);
 //		printf("adler32 %d %d\r\n", block_size * i, rsize);
@@ -466,7 +466,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		
 		memset(block_offset, 0, sizeof(unsigned int) * rnum_block);
 
-		int ret = adler32_scan(&data[0], file_size, rblock_size, rchecksum_array, rnum_block - 1, block_offset, rmd5_array);
+		int ret = adler32_scan((unsigned char *)&data[0], file_size, rblock_size, rchecksum_array, rnum_block - 1, block_offset, rmd5_array);
 		// last block is smaller than full block, needs another scan
 //		rsize = file_size - block_size * (rnum_block - 1);
 //		adler32_scan(&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
