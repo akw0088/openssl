@@ -19,40 +19,40 @@ crc32: crc32.c
 	$(CC) -o crc32 crc32.c
 
 base64_enc: base64_enc.c
-	$(CC) -o base64_enc base64_enc.c base64.c -fpermissive
+	$(CC) -o base64_enc base64_enc.c base64.c
 base64_dec: base64_dec.c
-	$(CC) -o base64_dec base64_dec.c base64.c -fpermissive
+	$(CC) -o base64_dec base64_dec.c base64.c
 
 huffman_enc: huffman_enc.c huffman.c
-	$(CC) -o huffman_enc huffman_enc.c huffman.c -fpermissive
+	$(CC) -o huffman_enc huffman_enc.c huffman.c
 huffman_dec: huffman_dec.c huffman.c
-	$(CC) -o huffman_dec huffman_dec.c huffman.c -fpermissive
+	$(CC) -o huffman_dec huffman_dec.c huffman.c
 
 
 rsa_enc: rsa_enc.cpp
-	$(CPP) -o rsa_enc rsa_enc.cpp -lcrypto -fpermissive
+	$(CPP) -o rsa_enc rsa_enc.cpp -lcrypto
 rsa_dec: rsa_dec.cpp
-	$(CPP) -o rsa_dec rsa_dec.cpp -lcrypto -fpermissive
+	$(CPP) -o rsa_dec rsa_dec.cpp -lcrypto
 
 aes_enc: aes_enc.cpp
-	$(CPP) -o aes_enc aes_enc.cpp -lcrypto -fpermissive
+	$(CPP) -o aes_enc aes_enc.cpp -lcrypto
 aes_dec: aes_dec.cpp
-	$(CPP) -o aes_dec aes_dec.cpp -lcrypto -fpermissive
+	$(CPP) -o aes_dec aes_dec.cpp -lcrypto
 
 upload: upload.cpp
-	$(CPP) -o upload upload.cpp -fpermissive
+	$(CPP) -o upload upload.cpp
 download: download.cpp
-	$(CPP) -o download download.cpp -fpermissive
+	$(CPP) -o download download.cpp
 
 aes_upload: aes_upload.cpp
-	$(CPP) -o aes_upload aes_upload.cpp -lcrypto -fpermissive
+	$(CPP) -o aes_upload aes_upload.cpp -lcrypto
 aes_download: aes_download.cpp
-	$(CPP) -o aes_download aes_download.cpp -lcrypto -fpermissive
+	$(CPP) -o aes_download aes_download.cpp -lcrypto
 
 aes_upload_reverse: aes_upload_reverse.cpp
-	$(CPP) -o aes_upload_reverse aes_upload_reverse.cpp -lcrypto -fpermissive
+	$(CPP) -o aes_upload_reverse aes_upload_reverse.cpp -lcrypto
 aes_download_reverse: aes_download_reverse.cpp
-	$(CPP) -o aes_download_reverse aes_download_reverse.cpp -lcrypto -fpermissive
+	$(CPP) -o aes_download_reverse aes_download_reverse.cpp -lcrypto
 
 getrandom: getrandom.cpp
 	$(CPP) -o getrandom getrandom.cpp
