@@ -449,10 +449,16 @@ int rsync_file_upload(char *file, unsigned short port)
 
 		for (int i = 0; i < rnum_block; i++)
 		{
+			int nrecv = 0;
 			rmd5_array[i] = (char *)malloc(33 * sizeof(char));
 			memset(rmd5_array[i], 0, 33);
-			recv(connfd, (char *)rmd5_array[i], 32, 0);
+
+			while ( nrecv < 32 )
+			{
+				nrecv += recv(connfd, (char *)&rmd5_array[i][nrecv], 32 - nrecv, 0);
+			}
 		}
+
 
 
 
