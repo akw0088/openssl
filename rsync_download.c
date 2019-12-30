@@ -616,7 +616,7 @@ int rsync_file_upload(char *file, unsigned short port)
 //		rsize = file_size - block_size * (rnum_block - 1);
 //		adler32_scan(&data[0], file_size, rsize, &rchecksum_array[rnum_block - 1], 1, &block_offset[rnum_block - 1]);
 		printf("Sending block offsets\r\n");
-		Send(connfd, block_offset, rnum_block * sizeof(unsigned int), 0);
+		Send(connfd, (char *)block_offset, rnum_block * sizeof(unsigned int), 0);
 
 		// Remote side now knows where it's blocks go in new file
 		// going to send all bytes in order of whats left starting from 0 and skipping whats in the block report
