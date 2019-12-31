@@ -39,6 +39,7 @@
 #define MOD_ADLER 65521
 
 void md5sum(char *data, unsigned int size, char *hash);
+void StripChars(const char *in, char *out, char *stripc);
 
 //    Adler-32 checksum is obtained by calculating two 16-bit checksums A and B and concatenating their bits into a 32-bit integer.
 // A is the sum of all bytes in the stream plus one, and B is the sum of the individual values of A from each step.
@@ -405,6 +406,10 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		printf("recv failed\r\n");
 		return -1;
 	}
+
+	char temp[128] = {0};
+	StripChars(file_name, temp, ".\\/;:*?\"<>|");
+	strcpy(file_name, temp);
 
 	unsigned char rfile_hash[33] = {0};
 	if ( Recv(sock, (char *)rfile_hash, MD5_SIZE, 0) == -1)
@@ -805,6 +810,10 @@ void StripChars(const char *in, char *out, char *stripc)
 		{
 			if (*in == stripc[i])
 			{
+				if (stripc[i] == '.' && strlen(in) == 4)
+				{
+					continue;
+				}
 				flag = 1;
 				break;
 			}
