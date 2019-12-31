@@ -108,7 +108,10 @@ int adler32_scan(unsigned char *data, unsigned int length, int block_size, unsig
 		// init output
 		offset_array[i].offset = -1;
 		offset_array[i].length = block_size;
+	}
 
+	for (int i = 0; i < num_hash; i++)
+	{
 		if (checksum == hash_array[i])
 		{
 			printf("offset %d matches %08X\r\n", 0, checksum);
@@ -303,6 +306,7 @@ int assemble_download(char *response, unsigned int rfile_size, char *data, unsig
 {
 	unsigned int diff_pos = 0;
 
+	memset(response, 0, rfile_size);
 	for (int j = 0; j < num_block; j++)
 	{
 		if (block_offset[j].offset == -1)
