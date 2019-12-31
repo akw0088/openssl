@@ -557,6 +557,17 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	closesocket(sock);
 	assemble_download(response, rfile_size, data, file_size, block_offset, num_block, block_size, (char *)diff, diff_size);
 	*final_size = rfile_size;
+
+	md5sum(response, rfile_size, file_hash);
+	if (strcmp(file_hash, rfile_hash) == 0)
+	{
+		printf("Rsync successful\r\n");
+	}
+	else
+	{
+		printf("Rsync failed, hashes dont match\r\n");
+	}
+
 	return 0;
 }
 
@@ -581,10 +592,17 @@ int rsync_file_upload(char *file, unsigned short port)
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	servaddr.sin_port = htons(port);
 
-	if ((bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr))) == -1)
+	int ret = bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+	while (ret == -1)
 	{
 		perror("bind error");
-		return 0;
+		printf("Retrying in 5 seconds\r\n");
+#ifdef WIN32
+		Sleep(5000);
+#else
+		sleep(5);
+#endif
+		ret = bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
 	}
 
 	printf("Server listening on: %s:%d\n", inet_ntoa(servaddr.sin_addr), htons(servaddr.sin_port));
