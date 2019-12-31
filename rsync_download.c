@@ -307,7 +307,7 @@ int assemble_download(char *response, unsigned int rfile_size, char *data, unsig
 	{
 		if (block_offset[j].length == 0)
 		{
-			printf("Filling block %d size %d with downloaded data\r\n", block_offset[j].length);
+			printf("Filling block %d size %d with downloaded data\r\n", j, block_offset[j].length);
 			memcpy(&response[j * block_size], &diff[diff_pos], block_offset[j].length);
 			diff_pos += block_size;
 			continue;
@@ -495,7 +495,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 
 	
 	printf("Sending block sums to server\r\n");	
-	block_t *block_offset = (unsigned int *)malloc(num_block * sizeof(block_t));
+	block_t *block_offset = (block_t *)malloc(num_block * sizeof(block_t));
 
 	Send(sock, (char *)&num_block, sizeof(int), 0);
 	Send(sock, (char *)&block_size, sizeof(int), 0);
