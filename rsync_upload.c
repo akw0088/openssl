@@ -453,13 +453,6 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	// Calculate block size first
 	int block_size = BLOCK_SIZE;
 	int num_block = file_size / block_size;
-	int remainder = file_size - num_block * block_size;
-	
-	// Increase block size to reduce last block size
-	int increase_block = remainder / num_block;
-	block_size += increase_block;
-	// recalculate block num
-	num_block = file_size / block_size;
 	remainder = file_size - num_block * block_size;
 	if (remainder > 0)
 	{
