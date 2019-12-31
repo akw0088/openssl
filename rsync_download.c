@@ -107,7 +107,7 @@ int adler32_scan(unsigned char *data, unsigned int length, int block_size, unsig
 	{
 		// init output
 		offset_array[i].offset = -1;
-		offset_array[i].length = 0;
+		offset_array[i].length = block_size;
 
 		if (checksum == hash_array[i])
 		{
@@ -305,11 +305,12 @@ int assemble_download(char *response, unsigned int rfile_size, char *data, unsig
 
 	for (int j = 0; j < num_block; j++)
 	{
-		if (block_offset[j].length == 0)
+		if (block_offset[j].offset == -1)
 		{
 			printf("Filling block %d size %d with downloaded data\r\n", j, block_offset[j].length);
 			memcpy(&response[j * block_size], &diff[diff_pos], block_offset[j].length);
-			diff_pos += block_size;
+			diff_pos += block_offset[j].length;
+			printf("%d bytes left of download\r\n", diff_size - diff_pos);
 			continue;
 		}
 
@@ -522,7 +523,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		}
 
 
-		if (block_offset[i].length == 0)
+		if (block_offset[i].offset == -1)
 		{
 			printf("\tmissing block %d [%d bytes]\r\n", i, rsize);
 		}
@@ -550,14 +551,28 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	assemble_download(response, rfile_size, data, file_size, block_offset, num_block, block_size, (char *)diff, diff_size);
 	*final_size = rfile_size;
 
-	md5sum(response, rfile_size, file_hash);
+	memset(file_hash, 0, MD5_SIZE + 1);
+	md5sum(response, *final_size, file_hash);
 	if (strcmp(file_hash, rfile_hash) == 0)
 	{
 		printf("Rsync successful\r\n");
 	}
 	else
 	{
-		printf("Rsync failed, hashes dont match\r\n");
+		printf("Rsync failed\r\n");
+		printf("hashes dont match\r\n\tremote: %s\r\n\tlocal : %s\r\n", file_hash, rfile_hash);
+		printf("file size\r\n\tremote: %d\r\n\tlocal : %d\r\n", *final_size, rfile_size);
+		printf("First 8 bytes\r\n");
+		for (int i = 0; i < 8; i++)
+		{
+			printf("%02X ", response[i]);
+		}
+
+		printf("\r\nLast 8 bytes\r\n");
+		for (int i = 0; i < 8; i++)
+		{
+			printf("%02X ", response[i + *final_size - 8]);
+		}
 	}
 
 	return 0;
@@ -737,6 +752,10 @@ int rsync_file_upload(char *file, unsigned short port)
 
 		// we dont send the last fragment block as we can only scan blocks of a single length at a time
 		int ret = adler32_scan((unsigned char *)&data[0], file_size, rblock_size, rchecksum_array, rnum_block - 1, block_offset, rmd5_array);
+		// set length of last block which is always transferred
+		block_offset[rnum_block - 1].offset = -1;
+		block_offset[rnum_block - 1].length = file_size - (rnum_block - 1) * rblock_size;
+
 
 		printf("Sending block offsets\r\n");
 		Send(connfd, (char *)block_offset, rnum_block * sizeof(block_t), 0);
@@ -748,7 +767,7 @@ int rsync_file_upload(char *file, unsigned short port)
 
 		for (int i = 0; i < rnum_block; i++)
 		{
-			if (block_offset[i].length == 0)
+			if (block_offset[i].offset == -1)
 			{
 				printf("\tClient missing block %d [%d bytes]\r\n", i, block_offset[i].length);
 			}
