@@ -181,13 +181,20 @@ int Recv(SOCKET sock, char *buffer, int size, int flag)
 		if (ret > 0)
 		{
 			num_read += ret;
+			if (size > 8192)
+			{
+				printf("Recv %d of %d\r", num_read, size);
+			}
 		}
 		else
 		{
 			return ret;
 		}
 	}
-
+	if (size > 8192)
+	{
+		printf("\r\n");
+	}
 	return num_read;
 }
 
@@ -205,13 +212,21 @@ int Send(SOCKET sock, char *buffer, int size, int flag)
 		if (ret > 0)
 		{
 			num_sent += ret;
+
+			if (size > 8192)
+			{
+				printf("Sent %d of %d\r", num_sent, size);
+			}
 		}
 		else
 		{
 			return ret;
 		}
 	}
-
+	if (size > 8192)
+	{
+		printf("\r\n");
+	}
 	return num_sent;
 }
 
@@ -391,8 +406,15 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		return -1;
 	}
 
+	unsigned char rfile_hash[33] = {0};
+	if ( Recv(sock, (char *)rfile_hash, MD5_SIZE, 0) == -1)
+	{
+		printf("recv failed\r\n");
+		return -1;
+	}
 
-	printf("Opening local %s file for local block check\r\n", file_name);
+
+	printf("Opening local %s file for compare\r\n", file_name);
 	unsigned int file_size = 0;
 	char *data = get_file(file_name, &file_size);
 	if (data == NULL)
@@ -401,9 +423,24 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		return -1;
 	}
 
+	unsigned char file_hash[33] = {0};
+	md5sum((char *)&data[0], file_size, file_hash);
+	if ( Send(sock, (char *)file_hash, MD5_SIZE, 0) == -1)
+	{
+		printf("recv failed\r\n");
+		return -1;
+	}
+
 	if (rfile_size == file_size)
 	{
 		printf("Our file is same size\r\n");
+		if (strcmp(file_hash, rfile_hash) == 0)
+		{
+			printf("Files have the same hash\r\n");
+			*final_size = 0;
+			return 0;
+		}
+
 	}
 	else if (rfile_size > file_size)
 	{
@@ -577,11 +614,29 @@ int rsync_file_upload(char *file, unsigned short port)
 
 		char file_name[PATH_SIZE] = { 0 };
 		int rblock_size = BLOCK_SIZE;
+		unsigned char file_hash[33] = {0};
+		unsigned char rfile_hash[33] = {0};
+		md5sum((char *)&data[0], file_size, file_hash);
 
 		unsigned int rnum_block = 0;
 		memcpy(file_name, file, MIN(PATH_SIZE - 1, strlen(file)));
 		Send(connfd, (char *)&file_size, sizeof(int), 0);
 		Send(connfd, (char *)&file_name, PATH_SIZE, 0);
+		Send(connfd, (char *)&file_hash, MD5_SIZE, 0);
+		if ( Recv(connfd, (char *)&rfile_hash, MD5_SIZE, 0) == -1)
+		{
+			printf("recv failed\r\n");
+			closesocket(connfd);
+			continue;
+		}
+
+		if (strcmp(rfile_hash, file_hash) == 0)
+		{
+			printf("Files already match\r\n");
+			closesocket(connfd);
+			continue;
+		}
+
 		if ( Recv(connfd, (char *)&rnum_block, sizeof(int), 0) == -1)
 		{
 			printf("recv failed\r\n");

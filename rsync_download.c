@@ -39,6 +39,7 @@
 #define MOD_ADLER 65521
 
 void md5sum(char *data, unsigned int size, char *hash);
+void StripChars(const char *in, char *out, char *stripc);
 
 //    Adler-32 checksum is obtained by calculating two 16-bit checksums A and B and concatenating their bits into a 32-bit integer.
 // A is the sum of all bytes in the stream plus one, and B is the sum of the individual values of A from each step.
@@ -181,13 +182,20 @@ int Recv(SOCKET sock, char *buffer, int size, int flag)
 		if (ret > 0)
 		{
 			num_read += ret;
+			if (size > 8192)
+			{
+				printf("Recv %d of %d\r", num_read, size);
+			}
 		}
 		else
 		{
 			return ret;
 		}
 	}
-
+	if (size > 8192)
+	{
+		printf("\r\n");
+	}
 	return num_read;
 }
 
@@ -205,13 +213,21 @@ int Send(SOCKET sock, char *buffer, int size, int flag)
 		if (ret > 0)
 		{
 			num_sent += ret;
+
+			if (size > 8192)
+			{
+				printf("Sent %d of %d\r", num_sent, size);
+			}
 		}
 		else
 		{
 			return ret;
 		}
 	}
-
+	if (size > 8192)
+	{
+		printf("\r\n");
+	}
 	return num_sent;
 }
 
@@ -391,8 +407,19 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		return -1;
 	}
 
+	char temp[128] = {0};
+	StripChars(file_name, temp, ".\\/;:*?\"<>|");
+	strcpy(file_name, temp);
 
-	printf("Opening local %s file for local block check\r\n", file_name);
+	unsigned char rfile_hash[33] = {0};
+	if ( Recv(sock, (char *)rfile_hash, MD5_SIZE, 0) == -1)
+	{
+		printf("recv failed\r\n");
+		return -1;
+	}
+
+
+	printf("Opening local %s file for compare\r\n", file_name);
 	unsigned int file_size = 0;
 	char *data = get_file(file_name, &file_size);
 	if (data == NULL)
@@ -401,9 +428,24 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		return -1;
 	}
 
+	unsigned char file_hash[33] = {0};
+	md5sum((char *)&data[0], file_size, file_hash);
+	if ( Send(sock, (char *)file_hash, MD5_SIZE, 0) == -1)
+	{
+		printf("recv failed\r\n");
+		return -1;
+	}
+
 	if (rfile_size == file_size)
 	{
 		printf("Our file is same size\r\n");
+		if (strcmp(file_hash, rfile_hash) == 0)
+		{
+			printf("Files have the same hash\r\n");
+			*final_size = 0;
+			return 0;
+		}
+
 	}
 	else if (rfile_size > file_size)
 	{
@@ -577,11 +619,29 @@ int rsync_file_upload(char *file, unsigned short port)
 
 		char file_name[PATH_SIZE] = { 0 };
 		int rblock_size = BLOCK_SIZE;
+		unsigned char file_hash[33] = {0};
+		unsigned char rfile_hash[33] = {0};
+		md5sum((char *)&data[0], file_size, file_hash);
 
 		unsigned int rnum_block = 0;
 		memcpy(file_name, file, MIN(PATH_SIZE - 1, strlen(file)));
 		Send(connfd, (char *)&file_size, sizeof(int), 0);
 		Send(connfd, (char *)&file_name, PATH_SIZE, 0);
+		Send(connfd, (char *)&file_hash, MD5_SIZE, 0);
+		if ( Recv(connfd, (char *)&rfile_hash, MD5_SIZE, 0) == -1)
+		{
+			printf("recv failed\r\n");
+			closesocket(connfd);
+			continue;
+		}
+
+		if (strcmp(rfile_hash, file_hash) == 0)
+		{
+			printf("Files already match\r\n");
+			closesocket(connfd);
+			continue;
+		}
+
 		if ( Recv(connfd, (char *)&rnum_block, sizeof(int), 0) == -1)
 		{
 			printf("recv failed\r\n");
@@ -750,6 +810,10 @@ void StripChars(const char *in, char *out, char *stripc)
 		{
 			if (*in == stripc[i])
 			{
+				if (stripc[i] == '.' && strlen(in) == 4)
+				{
+					continue;
+				}
 				flag = 1;
 				break;
 			}
@@ -798,22 +862,28 @@ int main(int argc, char *argv[])
 
 	printf("Attempting to download file from ip %s port %d\r\n", argv[1], (int)port);
 	int ret = rsync_file_download(argv[1], port, response, max_malloc_size, &download_size, file_name);
-	if (ret != 0)
+	if (ret < 0)
 	{
 		printf("Download failed\r\n");
 		return 0;
 	}
+	else if (ret == 0 && download_size == 0)
+	{
+		printf("File did not change\r\n");
+	}
+	else
+	{
+		printf("Download complete\r\n");
+		printf("Got %d bytes file name %s\r\n", download_size, file_name);
 
-	printf("Download complete\r\n");
-	printf("Got %d bytes file name %s\r\n", download_size, file_name);
+		char new_filename[PATH_SIZE] = {0};
+		char strip_filename[PATH_SIZE] = {0};
 
-	char new_filename[PATH_SIZE] = {0};
-	char strip_filename[PATH_SIZE] = {0};
+		StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");
 
-	StripChars(file_name, strip_filename, ".\\/;:*?\"<>|");
-
-	sprintf(new_filename, "downloaded_%s", strip_filename);
-	printf("Saving as file name %s\r\n", new_filename);
-	write_file(new_filename, response, download_size);
+		sprintf(new_filename, "downloaded_%s", strip_filename);
+		printf("Saving as file name %s\r\n", new_filename);
+		write_file(new_filename, response, download_size);
+	}
 	return 0;
 }
