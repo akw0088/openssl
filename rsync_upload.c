@@ -307,19 +307,31 @@ int assemble_download(char *response, unsigned int rfile_size, char *data, unsig
 	unsigned int diff_pos = 0;
 
 	memset(response, 0, rfile_size);
-	for (int j = 0; j < num_block; j++)
+	for (int i = 0; i < rfile_size; i++)
 	{
-		if (block_offset[j].offset == -1)
+		int skip = 0;
+
+		// check if this byte is in a block
+		for (int j = 0; j < num_block; j++)
 		{
-			printf("Filling block %d size %d with downloaded data\r\n", j, block_offset[j].length);
-			memcpy(&response[j * block_size], &diff[diff_pos], block_offset[j].length);
-			diff_pos += block_offset[j].length;
-			printf("%d bytes left of download\r\n", diff_size - diff_pos);
+			if (i >= block_offset[j].offset && i < block_offset[j].offset + block_size)
+			{
+				// we are in this block, memcpy and skip to the end of this block
+				memcpy(&response[i], &data[j * block_size], block_offset[j].length);
+				i = block_offset[j].offset + block_size - 1;
+				skip = 1;
+				break;
+			}
+		}
+
+		if (skip)
+		{
+			// restart again as we move passed a block
 			continue;
 		}
 
-		printf("Keeping block %d size %d\r\n", j, block_offset[j].length);
-		memcpy(&response[j * block_size], &data[j * block_size], block_offset[j].length);
+		// This byte comes from the download pile
+		response[i] = diff[diff_pos++];
 	}
 
 	return 0;
@@ -773,7 +785,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		unsigned char *send_file = (unsigned char *)malloc(file_size);
 		int send_file_pos = 0;
 
-
+		memset(send_file, 0, file_size);
 		for(int i = 0; i < file_size; i++)
 		{
 			int skip = 0;
@@ -789,7 +801,7 @@ int rsync_file_upload(char *file, unsigned short port)
 				if ( i >= block_offset[j].offset && i < block_offset[j].offset + rblock_size )
 				{
 					// we are in this block, skip to the end of this block
-					i = block_offset[j].offset + rblock_size;
+					i = block_offset[j].offset + rblock_size - 1;
 					skip = 1;
 					break;
 				}
@@ -798,7 +810,6 @@ int rsync_file_upload(char *file, unsigned short port)
 			if (skip)
 			{
 				// restart again as we move passed a block
-				i--;
 				continue;
 			}
 			
