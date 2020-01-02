@@ -895,6 +895,12 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+#ifdef WIN32
+	WSADATA		WSAData;
+
+	WSAStartup(MAKEWORD(2, 0), &WSAData);
+#endif
+
 	unsigned short port = atoi(argv[2]);
 	unsigned int max_malloc_size = atoi(argv[3]);
 
@@ -908,11 +914,7 @@ int main(int argc, char *argv[])
 	unsigned int download_size = 0;
 	char file_name[PATH_SIZE] = {0};
 
-#ifdef WIN32
-	WSADATA		WSAData;
 
-	WSAStartup(MAKEWORD(2, 0), &WSAData);
-#endif
 
 	printf("Attempting to download file from ip %s port %d\r\n", argv[1], (int)port);
 	int ret = rsync_file_download(argv[1], port, response, max_malloc_size, &download_size, file_name);

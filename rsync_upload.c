@@ -439,7 +439,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	}
 
 	unsigned char file_hash[MD5_SIZE + 1] = {0};
-	md5sum((char *)&data[0], file_size, file_hash);
+	md5sum((char *)&data[0], file_size, (char *)file_hash);
 	if ( Send(sock, (char *)file_hash, MD5_SIZE, 0) == -1)
 	{
 		printf("recv failed\r\n");
@@ -449,7 +449,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	if (rfile_size == file_size)
 	{
 		printf("Our file is same size\r\n");
-		if (strcmp(file_hash, rfile_hash) == 0)
+		if (strcmp((char *)file_hash, (char *)rfile_hash) == 0)
 		{
 			printf("Files have the same hash\r\n");
 			*final_size = 0;
@@ -569,7 +569,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	}
 
 	unsigned int download_size = 0;
-	download_size = Recv(sock, diff, diff_size, 0);
+	download_size = Recv(sock, (char *)diff, diff_size, 0);
 	if (download_size == -1)
 	{
 		printf("recv failed\r\n");
@@ -584,10 +584,10 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 
 	// Calculate final hash to be sure it matches
 	memset(file_hash, 0, MD5_SIZE + 1);
-	md5sum(response, *final_size, file_hash);
+	md5sum(response, *final_size, (char *)file_hash);
 
 
-	if (strcmp(file_hash, rfile_hash) != 0)
+	if (strcmp((char *)file_hash, (char *)rfile_hash) != 0)
 	{
 		printf("Rsync failed\r\n");
 		printf("hashes dont match\r\n\tremote: %s\r\n\tlocal : %s\r\n", file_hash, rfile_hash);
@@ -679,7 +679,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		unsigned char file_hash[MD5_SIZE + 1] = {0};
 		unsigned char rfile_hash[MD5_SIZE + 1] = {0};
 
-		md5sum((char *)&data[0], file_size, file_hash);
+		md5sum((char *)&data[0], file_size, (char *)file_hash);
 
 		unsigned int rnum_block = 0;
 		memcpy(file_name, file, MIN(PATH_SIZE - 1, strlen(file)));
@@ -693,7 +693,7 @@ int rsync_file_upload(char *file, unsigned short port)
 			continue;
 		}
 
-		if (strcmp(rfile_hash, file_hash) == 0)
+		if (strcmp((char *)rfile_hash, (char *)file_hash) == 0)
 		{
 			printf("Files already match\r\n");
 			closesocket(connfd);
