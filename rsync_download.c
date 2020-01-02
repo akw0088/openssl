@@ -32,7 +32,6 @@
 #include "md5sum.h"
 
 
-#define BLOCK_SIZE (1024 * 1024)
 #define PATH_SIZE 128
 #define MD5_SIZE 32
 #define MOD_ADLER 65521
@@ -341,7 +340,7 @@ int assemble_download(char *response, unsigned int rfile_size, char *data, unsig
 }
 
 
-int rsync_file_download(char *ip_str, unsigned short int port, char *response, int size, unsigned int *final_size, char *file_name)
+int rsync_file_download(char *ip_str, unsigned short int port, char *response, int size, unsigned int *final_size, char *file_name, unsigned int block_size)
 {
 	struct sockaddr_in	servaddr;
 	SOCKET sock;
@@ -477,8 +476,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	}
 
 	// Calculate block size first
-	int block_size = BLOCK_SIZE;
-	int num_block = file_size / block_size;
+	unsigned int num_block = file_size / block_size;
 	int remainder = file_size - num_block * block_size;
 	if (remainder > 0)
 	{
@@ -502,7 +500,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		return -1;
 	}
 
-	for (int i = 0; i < num_block; i++)
+	for (unsigned int i = 0; i < num_block; i++)
 	{
 		checksum_adler32[i] = -1;
 		md5_array[i] = md5_array[i] = malloc(MD5_SIZE + 1);
@@ -518,7 +516,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	if (data)
 	{
 		printf("Calculating adler32 and md5 hashes for each block\r\n");
-		for (int i = 0; i < num_block; i++)
+		for (unsigned int i = 0; i < num_block; i++)
 		{
 			unsigned int rsize = block_size;
 
@@ -542,7 +540,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	Send(sock, (char *)&num_block, sizeof(int), 0);
 	Send(sock, (char *)&block_size, sizeof(int), 0);
 	Send(sock, (char *)checksum_adler32, num_block * sizeof(int), 0);
-	for (int i = 0; i < num_block; i++)
+	for (unsigned int i = 0; i < num_block; i++)
 	{
 		Send(sock, (char *)md5_array[i], MD5_SIZE, 0);
 	}
@@ -554,7 +552,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	}
 
 	printf("Got offsets for each block\r\n");
-	for (int i = 0; i < num_block; i++)
+	for (unsigned int i = 0; i < num_block; i++)
 	{
 		int rsize = block_size;
 
@@ -691,7 +689,6 @@ int rsync_file_upload(char *file, unsigned short port)
 		}
 
 		char file_name[PATH_SIZE] = { 0 };
-		int rblock_size = BLOCK_SIZE;
 		unsigned char file_hash[MD5_SIZE + 1] = {0};
 		unsigned char rfile_hash[MD5_SIZE + 1] = {0};
 
@@ -723,6 +720,7 @@ int rsync_file_upload(char *file, unsigned short port)
 			continue;
 		}
 
+		unsigned int rblock_size = 0;
 		if ( Recv(connfd, (char *)&rblock_size, sizeof(int), 0) == -1)
 		{
 			printf("recv failed\r\n");
@@ -905,9 +903,9 @@ void StripChars(const char *in, char *out, char *stripc)
 
 int main(int argc, char *argv[])
 {
-	if (argc < 4)
+	if (argc < 5)
 	{
-		printf("Usage: rsync_download ip port max_size\r\n");
+		printf("Usage: rsync_download ip port max_size block_size\r\n");
 		return 0;
 	}
 
@@ -919,6 +917,7 @@ int main(int argc, char *argv[])
 
 	unsigned short port = atoi(argv[2]);
 	unsigned int max_malloc_size = atoi(argv[3]);
+	unsigned int block_size = atoi(argv[4]);
 
 	printf("Allocating %d bytes\r\n", max_malloc_size);
 	char *response = (char *)malloc(max_malloc_size);
@@ -932,8 +931,8 @@ int main(int argc, char *argv[])
 
 
 
-	printf("Attempting to download file from ip %s port %d\r\n", argv[1], (int)port);
-	int ret = rsync_file_download(argv[1], port, response, max_malloc_size, &download_size, file_name);
+	printf("Attempting to download file from ip %s port %d using block size %d\r\n", argv[1], (int)port, block_size);
+	int ret = rsync_file_download(argv[1], port, response, max_malloc_size, &download_size, file_name, block_size);
 	if (ret < 0)
 	{
 		printf("Download failed\r\n");
