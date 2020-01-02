@@ -788,14 +788,24 @@ int rsync_file_upload(char *file, unsigned short port)
 		}
 		printf("Searching for matches in %d blocks\r\n", rnum_block);
 		
+		unsigned int null_count = 0;
 		for (unsigned int i = 0; i < rnum_block; i++)
 		{
 			block[i].offset = -1;
 			block[i].length = 0;
+
+			if (strcmp(rmd5_array, "") == 0)
+			{
+				null_count++;
+			}
 		}
 
-		// we dont send the last partial block as we can only scan blocks of a single length at a time
-		int ret = adler32_scan((unsigned char *)&data[0], file_size, rblock_size, rchecksum_array, rnum_block - 1, block, rmd5_array);
+		int ret = 0;
+		if (null_count != rnum_block)
+		{
+			// we dont send the last partial block as we can only scan blocks of a single length at a time
+			ret = adler32_scan((unsigned char *)&data[0], file_size, rblock_size, rchecksum_array, rnum_block - 1, block, rmd5_array);
+		}
 
 		// set length of last block which is always transferred
 		block[rnum_block - 1].offset = -1;
