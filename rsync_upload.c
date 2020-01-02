@@ -794,7 +794,7 @@ int rsync_file_upload(char *file, unsigned short port)
 			block[i].offset = -1;
 			block[i].length = 0;
 
-			if (strcmp(rmd5_array, "") == 0)
+			if (strcmp((char *)rmd5_array, "") == 0)
 			{
 				null_count++;
 			}
