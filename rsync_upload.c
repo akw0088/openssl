@@ -1,12 +1,7 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <errno.h>
-#include "md5sum.h"
+
 
 #ifdef WIN32
+	#define  _CRT_SECURE_NO_WARNINGS
 	#include <windows.h>
 	#include <winsock.h>
 
@@ -29,6 +24,15 @@
 	#define SOCKET_ERROR	-1
 	#define INVALID_SOCKET	-1
 #endif
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <errno.h>
+#include "md5sum.h"
+
 
 #define BLOCK_SIZE (1024 * 1024)
 #define PATH_SIZE 128
@@ -92,7 +96,7 @@ unsigned int adler32_roll(unsigned int adler, unsigned char buf_in, unsigned cha
 }
 
 
-int adler32_scan(unsigned char *data, unsigned int length, int block_size, unsigned int *hash_array, int num_hash, block_t *block, char **md5_array)
+int adler32_scan(unsigned char *data, unsigned int length, unsigned int block_size, unsigned int *hash_array, int num_hash, block_t *block, char **md5_array)
 {
 	unsigned int start_offset = 1;
 	if (block_size > length)
@@ -185,7 +189,7 @@ int adler32_scan(unsigned char *data, unsigned int length, int block_size, unsig
 
 
 // Recv can return before recv'ing all data, causing your data to get shifted in rare occurances
-int Recv(SOCKET sock, char *buffer, int size, int flag)
+int Recv(SOCKET sock, char *buffer, unsigned int size, int flag)
 {
 	unsigned int num_read = 0;
 
@@ -308,7 +312,7 @@ int assemble_download(char *response, unsigned int rfile_size, char *data, unsig
 	unsigned int diff_pos = 0;
 
 	memset(response, 0, rfile_size);
-	for (int i = 0; i < rfile_size; i++)
+	for (unsigned int i = 0; i < rfile_size; i++)
 	{
 		int skip = 0;
 
@@ -435,11 +439,14 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	if (data == NULL)
 	{
 		printf("Unable to open %s\r\n", file_name);
-		return -1;
 	}
 
 	unsigned char file_hash[MD5_SIZE + 1] = {0};
-	md5sum((char *)&data[0], file_size, (char *)file_hash);
+	if (data != NULL)
+	{
+		md5sum((char *)&data[0], file_size, (char *)file_hash);
+	}
+
 	if ( Send(sock, (char *)file_hash, MD5_SIZE, 0) == -1)
 	{
 		printf("recv failed\r\n");
@@ -466,6 +473,10 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		printf("Our file is larger by %d bytes\r\n", file_size - rfile_size);
 	}
 
+	if (data == NULL)
+	{
+		file_size = rfile_size;
+	}
 
 	// Calculate block size first
 	int block_size = BLOCK_SIZE;
@@ -506,22 +517,29 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		memset(md5_array[i], 0, MD5_SIZE + 1);
 	}
 
-	printf("Calculating adler32 and md5 hashes for each block\r\n");
-	for(int i = 0; i < num_block; i++)
+	if (data)
 	{
-		unsigned int rsize = block_size;
-
-		if (i == num_block - 1)
+		printf("Calculating adler32 and md5 hashes for each block\r\n");
+		for (int i = 0; i < num_block; i++)
 		{
-			rsize = file_size - block_size * i;
-		}
-		checksum_adler32[i] = adler32((unsigned char *)&data[block_size * i], rsize);
-		md5sum((char *)&data[block_size * i], rsize, md5_array[i]);
-	}
+			unsigned int rsize = block_size;
 
+			if (i == num_block - 1)
+			{
+				rsize = file_size - block_size * i;
+			}
+			checksum_adler32[i] = adler32((unsigned char *)&data[block_size * i], rsize);
+			md5sum((char *)&data[block_size * i], rsize, md5_array[i]);
+		}
+	}
 	
 	printf("Sending hashes to server\r\n");	
-	block_t *block_offset = (block_t *)malloc(num_block * sizeof(block_t));
+	block_t *block = (block_t *)malloc(num_block * sizeof(block_t));
+	if (block == NULL)
+	{
+		perror("malloc failed");
+		return -1;
+	}
 
 	Send(sock, (char *)&num_block, sizeof(int), 0);
 	Send(sock, (char *)&block_size, sizeof(int), 0);
@@ -531,7 +549,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 		Send(sock, (char *)md5_array[i], MD5_SIZE, 0);
 	}
 
-	if ( Recv(sock, (char *)&block_offset[0], sizeof(block_t) * num_block, 0) == -1)
+	if ( Recv(sock, (char *)&block[0], sizeof(block_t) * num_block, 0) == -1)
 	{
 		printf("recv failed\r\n");
 		return -1;
@@ -547,7 +565,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 			rsize = rfile_size - (num_block - 1) * block_size;
 		}
 
-		if (block_offset[i].offset == -1)
+		if (block[i].offset == -1)
 		{
 			printf("\tmissing block %d [%d bytes]\r\n", i, rsize);
 		}
@@ -579,7 +597,7 @@ int rsync_file_download(char *ip_str, unsigned short int port, char *response, i
 	printf("Downloaded delta\r\n");
 	closesocket(sock);
 
-	assemble_download(response, rfile_size, data, file_size, block_offset, num_block, block_size, (char *)diff, diff_size);
+	assemble_download(response, rfile_size, data, file_size, block, num_block, block_size, (char *)diff, diff_size);
 	*final_size = rfile_size;
 
 	// Calculate final hash to be sure it matches
@@ -723,7 +741,7 @@ int rsync_file_upload(char *file, unsigned short port)
 			continue;
 		}
 
-		for (int i = 0; i < rnum_block; i++)
+		for (unsigned int i = 0; i < rnum_block; i++)
 		{
 			rchecksum_array[i] = -1;
 		}
@@ -751,7 +769,7 @@ int rsync_file_upload(char *file, unsigned short port)
 			continue;
 		}
 
-		for (int i = 0; i < rnum_block; i++)
+		for (unsigned int i = 0; i < rnum_block; i++)
 		{
 			rmd5_array[i] = (char *)malloc(MD5_SIZE + 1 * sizeof(char));
 			memset(rmd5_array[i], 0, MD5_SIZE + 1);
@@ -774,7 +792,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		}
 		printf("Searching for matches in %d blocks\r\n", rnum_block);
 		
-		for (int i = 0; i < rnum_block; i++)
+		for (unsigned int i = 0; i < rnum_block; i++)
 		{
 			block[i].offset = -1;
 			block[i].length = 0;
@@ -795,7 +813,7 @@ int rsync_file_upload(char *file, unsigned short port)
 		// going to send all bytes in order of whats left starting from 0 and skipping whats in the block report
 		
 		printf("Determining data client is missing\r\n");
-		for (int i = 0; i < rnum_block; i++)
+		for (unsigned int i = 0; i < rnum_block; i++)
 		{
 			if (block[i].offset == -1)
 			{
@@ -814,12 +832,12 @@ int rsync_file_upload(char *file, unsigned short port)
 		int send_file_pos = 0;
 
 		memset(send_file, 0, file_size);
-		for(int i = 0; i < file_size; i++)
+		for(unsigned int i = 0; i < file_size; i++)
 		{
 			int skip = 0;
 
 
-			for(int j = 0; j < rnum_block; j++)
+			for(unsigned int j = 0; j < rnum_block; j++)
 			{
 				if (block[j].length == 0)
 				{
